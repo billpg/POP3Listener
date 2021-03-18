@@ -166,6 +166,21 @@ namespace billpg.pop3svc
 
         private PopResponse PASS(string claimedPassClear)
         {
+            /* Reusable bad password response. */
+            PopResponse badPasswordResponse() 
+                => PopResponse.ERR("AUTH", "Wrong username or password.");
+
+            /* Check if this IP has been banned. */
+            System.Net.IPAddress clientIP = ((IPOP3ConnectionInfo)this).ClientIP;
+            if (this.service.IPBanEngine.IsBanned(clientIP))
+            {
+                /* Renew the ban. */
+                this.service.IPBanEngine.RegisterFailedAttempt(clientIP);
+
+                /* Return the same response for a bad password. */                
+                return badPasswordResponse();
+            }
+
             /* Only valid if username provided and not yet authenticated. */
             if (this.unauthUserName == null)
                 return PopResponse.ERR("Call USER before PASS.");
@@ -193,8 +208,14 @@ namespace billpg.pop3svc
             /* Denied. */
             else
             {
+                /* Reset attempted user. */
+                this.unauthUserName = null;
+
+                /* Raise the failed attempt count. */
+                this.service.IPBanEngine.RegisterFailedAttempt(clientIP);
+
                 /* Send response with the "AUTH" flag, indicating the error is due to credentials and not a random fault. */
-                return PopResponse.ERR("AUTH", "Wrong user/pass.");
+                return badPasswordResponse();
             }
         }
 

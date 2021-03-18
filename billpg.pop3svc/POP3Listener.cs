@@ -15,6 +15,7 @@ namespace billpg.pop3svc
         private readonly List<TcpListener> listeners;
         private readonly List<SingleConnectionWorker> connections;
         private IPOP3MailboxProvider mailboxProvider;
+        public IIPBanEngine IPBanEngine { get; set; } = new ThreeStrikesBanEngine();
         public IPOP3EventNotification EventNotification { get; set; } = NullEventNotification.Singleton;
         public bool RequireSecureLogin { get; set; }
         public System.Security.Cryptography.X509Certificates.X509Certificate SecureCertificate { get; set; }
