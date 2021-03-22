@@ -29,26 +29,34 @@ The service will call through to this provider object to handle login requests.
 - ```Authenticate(info, username, password)```
   - Passes a uername and password. Provider object should test the supplied credentials for validity and either return an object that implements the ```IPOP3Mailbox``` interface, or NULL to reject the login request.
 - ```RegisterNewMessageAction(action)```
-  - Not yet implemented but aded for future expansion. Provider objects should implement this with an empty function. 
+  - Not yet implemented but aded for planned expansion. Provider objects should implement this with an empty function. 
 
 ### IPOP3Mailbox
 
 The service will call through to this provider object to handle requsts to access the contents of messages.
 
 - ```UserID(info)```
-  - Return the user ID for this user. This ID is the single ID that uniquely identifies a user. A user might login as "bob", "BOB" or "bob@here", but this function allows the provider to normalize all those names into just "bob".
+  - Return the user ID for this user. This ID is the single ID that uniquely identifies a user. 
+  - A user might login as "bob", "BOB" or "bob@here", but this function allows the provider to normalize all those names into just "bob".
 - ```ListMessageUniqueIDs(info)```
-  - Called when the service needs a "directory listing". The provider should return a collection of strings that identify the messages available to the user. If the user's mailbox is empty, this function should return an empty collection.
+  - Called when the service needs a "directory listing". The provider should return a collection of strings that identify the messages available to the user. 
+  - If the user's mailbox is empty, this function should return an empty collection.
+  - These identifiers will be shown to the user in response to a ```UIDL``` command. The strings must only use ASCII characters, not including control characters and space.
 - ```MessageExists(info, uniqueID)```
-  - Called to request if a message exists or not. The sevice only calls this when the client requests a message that hasn't been identified before and allows the service to handle it.
+  - Called to request if a message exists or not. 
+  - The sevice only calls this when the client requests a message that hasn't been identified before and allows the service to handle it.
 - ```MessageSize(info, uniqueID)```
   - Called to request the size of the identified message in bytes.
 - ```MessageContent(info, uniqueID)```
-  - Called to request the contents of the identified message. The response is in the form of an object that implements the ```IMessageContent``` interface.
+  - Called to request the contents of the identified message. 
+  - The response is in the form of an object that implements the ```IMessageContent``` interface.
 - ```MessageDelete(info, uniqueIDCollection)```
-  - Called to request that the listed messages are all to be deleted. The provider should delete all of them (or at least put them beyond future retrieval) in an atomic operation.
+  - Called to request that the listed messages are all to be deleted. 
+  - The provider should delete all of them (or otherwise put them beyond future retrieval) in an atomic operation.
 
-The provider code may throw an exception of type PopResponseException to cause the service to respond with an error to the client. This exception might have a "critical" flag that causes the connection to be shut down.
+The provider code may throw an exception of type ```PopResponseException``` to cause the service to respond with an error to the client. This exception might have a "critical" flag that causes the connection to be shut down.
+
+If the provider code throws a ```NotImplementedException```, the service will pass an appropriate error to the client but keep the onnection open.
 
 ### IMessageContent
 
@@ -59,6 +67,23 @@ This interface allows the service to read a message's contents line-by-line, wit
 - ```Close()```
   - Indicates the service has retrieved enough lines.   
 
+### IPOP3ConnectionInfo
+
+Many calls to the above interfaces from the service engine will supply an "info" object that implements this interface, providing some details about the crrent connection.
+
+- ```ClientIP```
+  - The source IP address of the current connection.
+- ```ConnectionID```
+  - The internal connection identifier used by the service.
+- ```UserID```
+  - The user ID of this mailbox, as normalized by the UserID function documented above.
+- ```UserNameAtLogin```
+  - The user name supplied by the user on login.
+- ```IsSecure```
+  - Returns a flag indicating if the underlying connection is secured by TLS.
+- ```ProviderTag```
+  - A settable object reference your code can use that will remain attached to this connection. The service will ignore it.  
+
 ## What extensions does it demonstrate?
 
 These posts describe the POP3 extensions that this service implement:
@@ -68,7 +93,7 @@ These posts describe the POP3 extensions that this service implement:
 
 The service uses .net's ```TcpListener``` library to listen for incoming TCP connections. When one arrives, the handler launches a new thread to handle the incomming connection which listens for commands sent from the client and returns responses.
 
-This does mean that there's going to be a new thread opened for every incomming connection. That's because this comes from an early stage of development for a larger project. When that project is released, it'll use the preferred model of waiting asynchronously for commands coming from clients. For now, this project should only be considered a prototype that demonstrates the concept. For this reason, the demo services only listen for incomming connections on the localhost network interface. (You are free to edit the code so it listens on the main netwok interface.)
+This does mean that there's going to be a new thread opened for every incomming connection. That's because this comes from an early stage of development for a larger project. When that project is released, it'll use the preferred model of waiting asynchronously for commands coming from clients. For now, this project should only be considered a prototype that demonstrates the concept. For this reason, the demo services only listen for incomming connections on the localhost network interface. (You are free to edit the code so it listens on the main network interface.)
 
 The very purpose of one of these extensions is to allow a client to usefully keep a POP3 connection open in the long term. I acknowledge the irony that this prototype goes against that.
 
