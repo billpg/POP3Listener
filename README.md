@@ -3,9 +3,23 @@ A POP3 Service for .net with pluggable mailbox providers.
 
 ## What is it?
 
-This is a POP3 service, written using C#. The service is implemented using the "Listener" pattern where your code launches the service with a "provider" object. The service listens for incoming requests on the configured ports and reads POP3 commands sent from the client. When it needs to, requests are passed along to your provider object so your code is in control of the important details.
+This is a POP3 service, written using C#. The service is implemented using the "Listener" pattern where your code launches the service with a "provider" object that you write. The service listens for incoming requests on the configured ports and reads POP3 commands sent from the client. When the server needs a list of messages or the contents of a message, the service will invoke the provider object. This way, the service code deals with the complexity of talking protocol while your code is left with making the important decisions.
 
-This code was take from a snapshot of a larger project in order to demonstrate extensions to the POP3 protocol. To complete the demo, this project comes with two wrapper projects. One implements a Windows Form app that allows the user to populate mailboxes with messages that a POP3 client might come along into and download. The other is a command-line application that automatically and randomly populates a mailbox with messages.
+## But why?
+
+Because I thought you'd find it impressive.
+
+![](https://media.giphy.com/media/NInhSPmxCgaxq/giphy.gif)         
+(That's you.)
+
+But as well as that, I wrote some extensions to POP3 and needed working code in the form of a prototype. I had already started a larger project to build a mail server library, so I decided to pull out the POP3 section and publish that as my prototype. The overall project is still in its early stage and using the one-thread-per-connection model, but this is good enough to move forward with writing these extensions into RFCs. It is with some irony that the point of one of these extensions is allow connections to be kept open in the long term. Having a thread open for each open connecton is not what you want.
+
+So yes, next on my list of things to do is to use proper async reads. So don't bother pointing it out.
+
+If you'd like to be even more impressed, here's the description of the extensions I wrote:
+- To
+- Be
+- Added
 
 ## How do I use it?
 
@@ -84,23 +98,12 @@ Many calls to the above interfaces from the service engine will supply an "info"
 - ```ProviderTag```
   - A settable object reference your code can use that will remain attached to this connection. The service will ignore it.  
 
-## What extensions does it demonstrate?
-
-These posts describe the POP3 extensions that this service implement:
-- (Links redacted until they're published.)
-
-## How does it work?
-
-The service uses .net's ```TcpListener``` library to listen for incoming TCP connections. When one arrives, the handler launches a new thread to handle the incomming connection which listens for commands sent from the client and returns responses.
-
-This does mean that there's going to be a new thread opened for every incomming connection. That's because this comes from an early stage of development for a larger project. When that project is released, it'll use the preferred model of waiting asynchronously for commands coming from clients. For now, this project should only be considered a prototype that demonstrates the concept. For this reason, the demo services only listen for incomming connections on the localhost network interface. (You are free to edit the code so it listens on the main network interface.)
-
-The very purpose of one of these extensions is to allow a client to usefully keep a POP3 connection open in the long term. I acknowledge the irony that this prototype goes against that.
-
 ## Does it work on Linux?
 
 Yes. I've tested it using Microsoft's .NET 5.0 for Linux with Ubuntu in a virtual machine, with help from Visual Studio Code.
 
 ## I have requests or issues.
 
-Please open an issue on this github project. I may end up closing it as won't-fix here but actually developing the requested change on my larger project under development. If I do that I'll let you know what's going on.
+Please open an issue on this github project. I may end up closing it as won't-fix here but actually developing the requested change on my larger project under development. If I do that I'll let you know what's going on. 
+
+<div><a href="https://billpg.com/"><img src="https://billpg.com/wp-content/uploads/2021/03/BillAndRobotAtFargo-e1616435505905-150x150.jpg" alt="billpg.com" align="right" border="0" style="border-radius: 25px; box-shadow: 5px 5px 5px grey;" /></a></div>
