@@ -10,6 +10,12 @@ namespace billpg.pop3svc
 {
     internal static class ContentWrappers
     {
+        /// <summary>
+        /// Wrap a message content interface with a NextLineFn function suiatbe for a TOP command.
+        /// </summary>
+        /// <param name="msg">Provider's message content object.</param>
+        /// <param name="lineCount">Numbe rof lines after the ehader.</param>
+        /// <returns>Wrapper function.</returns>
         internal static NextLineFn WrapForTop(IMessageContent msg, long lineCount)
         {
             /* Update counter, because the blank line doesn't count. */
@@ -55,6 +61,41 @@ namespace billpg.pop3svc
                     lineCount -= 1;
 
                 /* Return the line. */
+                return line;
+            }
+        }
+
+        /// <summary>
+        /// Wrap a message content object in a NextLineFn wrapper.
+        /// </summary>
+        /// <param name="msg">Provider's messge content object.</param>
+        /// <returns>Wrapped function instance.</returns>
+        internal static NextLineFn WrapForRetr(IMessageContent msg)
+        {
+            /* Setup a flag to be raised when the message content has completed. */
+            bool endOfMessage = false;
+
+            /* Return the wrapper function. */
+            return Wrap;
+            string Wrap()
+            {
+                /* If we've already seen the end of the message, return null only. */
+                if (endOfMessage)
+                    return null;
+
+                /* Read the next line from the supplied object. */
+                string line = msg.NextLine();
+
+                /* End of message? */
+                if (line == null)
+                {
+                    /* Close the wrapped resource, raise flag and stop. */
+                    msg.Close();
+                    endOfMessage = true;
+                    return null;                    
+                }
+
+                /* Otherwise, return loaded line. */
                 return line;
             }
         }

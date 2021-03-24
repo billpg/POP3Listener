@@ -339,7 +339,7 @@ namespace billpg.pop3svc
 
             /* If RETR, return the whole message without a wrapper. */
             if (lineCountSend < 0)
-                return PopResponse.OKMulti("Message text follows...", msg.NextLine);
+                return PopResponse.OKMulti("Message text follows...", ContentWrappers.WrapForRetr(msg));
 
             /* If TOP (include header but stop early. */
             else
