@@ -25,6 +25,7 @@ namespace billpg.pop3svc
         bool MessageExists(IPOP3ConnectionInfo info, string uniqueID);
         long MessageSize(IPOP3ConnectionInfo into, string uniqueID);
         IMessageContent MessageContents(IPOP3ConnectionInfo info, string uniqueID);
+        bool MailboxIsReadOnly(IPOP3ConnectionInfo info);
         void MessageDelete(IPOP3ConnectionInfo info, IList<string> uniqueIDs);
     }
 

@@ -355,6 +355,10 @@ namespace billpg.pop3svc
             if (string.IsNullOrEmpty(pars))
                 return BadCommandSyntaxResponse;
 
+            /* If the mailbox is read-only, return error. */
+            if (this.mailbox.MailboxIsReadOnly(this))
+                return PopResponse.ERR("READ-ONLY", "This mailbox is read-only.");
+
             /* Parse for unique ID. Will also check if message is already flagged. */
             ParseForUniqueId(pars, out _, out string uniqueID);
 

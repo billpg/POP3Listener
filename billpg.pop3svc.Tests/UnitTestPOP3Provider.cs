@@ -15,6 +15,7 @@ namespace billpg.pop3svc.Tests
     internal class UnitTestPOP3Provider : IPOP3MailboxProvider, IPOP3Mailbox
     {
         public string Name => "UnitTest";
+        bool IPOP3Mailbox.MailboxIsReadOnly(IPOP3ConnectionInfo info) => false;
 
         internal List<string> uniqueIdsInMailbox;
         public RaiseNewMessageEvent onNewMessage;

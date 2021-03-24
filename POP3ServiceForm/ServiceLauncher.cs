@@ -62,6 +62,7 @@ namespace Pop3ServiceForm
         }
 
         string IPOP3MailboxProvider.Name => "Pop3ServiceForm";
+        bool IPOP3Mailbox.MailboxIsReadOnly(IPOP3ConnectionInfo info) => false;
         static void DoNothing()
         { }
         string nextUserID = null;
