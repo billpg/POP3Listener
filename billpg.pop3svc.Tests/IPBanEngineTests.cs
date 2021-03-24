@@ -41,7 +41,7 @@ namespace billpg.pop3svc.Tests
                 ban.RegisterFailedAttempt(ip);
 
                 /* After three attempts (0,1,2), this IP is banned. */
-                Assert.AreEqual(attemptCount > 2, ban.IsBanned(ip));
+                Assert.AreEqual(attemptCount > 1, ban.IsBanned(ip));
             }
         }
     }
