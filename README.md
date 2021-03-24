@@ -19,9 +19,11 @@ So yes, next on my list of things to do is to use proper async reads. So don't b
 If you'd like to be even more impressed, here's the description of the extensions I wrote:
 - [Mailbox Refresh Mechanism][1]
 - [Goodbye to Numeric Message IDs][2]
+- [RFC drafting project][3]
 
 [1]: https://billpg.com/pop3-refr/
 [2]: https://billpg.com/pop3-message-ids/
+[3]: https://github.com/billpg/Pop3ExtRfc/
 
 ## How do I use it?
 
