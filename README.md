@@ -17,9 +17,11 @@ But as well as that, I wrote some extensions to POP3 and needed working code in 
 So yes, next on my list of things to do is to use proper async reads. So don't bother pointing it out.
 
 If you'd like to be even more impressed, here's the description of the extensions I wrote:
-- To
-- Be
-- Added
+- [Mailbox Refresh Mechanism][1]
+- [Goodbye to Numeric Message IDs][2]
+
+[1]: https://billpg.com/pop3-refr/
+[2]: https://billpg.com/pop3-message-ids/
 
 ## How do I use it?
 
