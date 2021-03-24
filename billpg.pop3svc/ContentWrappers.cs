@@ -26,22 +26,28 @@ namespace billpg.pop3svc
 
             /* Raise a flag once Close has been called. */
             bool calledClose = false;
+            void CloseStream()
+            {
+                /* Notthing to do if closed already called. */
+                if (calledClose)
+                    return;
 
+                /* Inform the message content object. */
+                msg.Close();
+
+                /* Raise the flag. */
+                calledClose = true;
+            }
+
+            /* Return he wrapper function. */
             return Impl;
             string Impl()
             {
                 /* Have we exhausted the requested line count? */
                 if (lineCount == 0)
                 {
-                    /* Inform the message content object we're stopping. */
-                    if (calledClose == false)
-                    {
-                        /* Actually call Close. */
-                        msg.Close();
-
-                        /* Raise flag to prevent repeat. */
-                        calledClose = true;
-                    }
+                    /* Inform the content object and raise flag. */
+                    CloseStream();
 
                     /* Signal end-of-stream. */
                     return null;
@@ -50,7 +56,11 @@ namespace billpg.pop3svc
                 /* Load a line. Test for end-of-message. */
                 string line = msg.NextLine();
                 if (line == null)
+                {
+                    /* Close the message content stream and return null. */
+                    CloseStream();
                     return null;
+                }
 
                 /* Is it the blank line that ends the header? */
                 if (insideMesageBody == false && line.Length == 0)
