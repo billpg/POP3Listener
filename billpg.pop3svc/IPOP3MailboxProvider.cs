@@ -18,6 +18,20 @@ namespace billpg.pop3svc
         void RegisterNewMessageAction(RaiseNewMessageEvent onNewMessage);
     }
 
+    internal class NullMailboxProvider : IPOP3MailboxProvider
+    {
+        internal static readonly IPOP3MailboxProvider Singleton = new NullMailboxProvider();
+
+        public string Name => null;
+
+        public IPOP3Mailbox Authenticate(IPOP3ConnectionInfo info, string username, string password)
+            => null;
+
+        public void RegisterNewMessageAction(RaiseNewMessageEvent onNewMessage)
+        {
+        }
+    }
+
     public interface IPOP3Mailbox
     {
         string UserID(IPOP3ConnectionInfo info);

@@ -14,7 +14,7 @@ namespace billpg.pop3svc
         private readonly object mutex;
         private readonly List<TcpListener> listeners;
         private readonly List<SingleConnectionWorker> connections;
-        private IPOP3MailboxProvider mailboxProvider;
+        private IPOP3MailboxProvider mailboxProvider = NullMailboxProvider.Singleton;
         public IIPBanEngine IPBanEngine { get; set; } = new ThreeStrikesBanEngine();
         public IPOP3EventNotification EventNotification { get; set; } = NullEventNotification.Singleton;
         public bool RequireSecureLogin { get; set; }
@@ -146,7 +146,7 @@ namespace billpg.pop3svc
             set
             {
                 /* Store the provider and pass along the new message event handler. */
-                this.mailboxProvider = value;
+                this.mailboxProvider = value ?? NullMailboxProvider.Singleton;
                 this.mailboxProvider.RegisterNewMessageAction(OnNewMessage);
             }
         }
