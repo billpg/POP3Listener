@@ -157,6 +157,10 @@ namespace billpg.pop3svc
 
         public bool IsBanned(IPAddress ip)
         {
+            /* Always allow localhost connections. */
+            if (IPAddress.IsLoopback(ip))
+                return false;
+
             /* Normalize IPv6 addresses. */
             NormalizeIP(ref ip);
 
