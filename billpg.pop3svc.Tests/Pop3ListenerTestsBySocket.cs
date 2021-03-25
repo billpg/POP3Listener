@@ -252,11 +252,6 @@ namespace billpg.pop3svc.Tests
                                 addedIDs.Add(addedID);
                             }
 
-                            /* Run STAT again. The values should not have changed except the length might. */
-                            WriteLine(str, "STAT");
-                            var statResp2 = ReadLine(str);
-                            Assert.AreEqual(UpToLastSpace(statRespBefore), UpToLastSpace(statResp2));
-
                             /* Refresh, committing the above deletes. expecting no new messages. */
                             WriteLine(str, "REFR");
                             var refrResp = ReadLine(str);
@@ -337,6 +332,11 @@ namespace billpg.pop3svc.Tests
             RunTestLoggedIn(Internal);
             void Internal(Stream str, UnitTestPOP3Provider prov)
             {
+                /* Collect the STAT report. */
+                WriteLine(str, "STAT");
+                var statResp1 = ReadLine(str);
+                Assert.AreEqual("+OK 100 16000", statResp1);
+
                 /* Obtain the list of unique-IDs. */
                 WriteLine(str, "UIDL");
                 var uidlFirst = ReadMultiLineIfOkay(str);
@@ -413,6 +413,11 @@ namespace billpg.pop3svc.Tests
                 WriteLine(str, "RETR " + deletedMessageID);
                 var retr84Resp = ReadLine(str);
                 Assert.AreEqual("-ERR That message has been deleted.", retr84Resp);
+
+                /* Check STAT no-longer includes the deleted ones. */
+                WriteLine(str, "STAT");
+                var statrResp2 = ReadLine(str);
+                Assert.AreEqual("+OK 99 15840", statrResp2);
 
                 /* Commit the deletes and exit. */
                 WriteLine(str, "QUIT");

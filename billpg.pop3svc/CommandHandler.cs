@@ -236,11 +236,14 @@ namespace billpg.pop3svc
 
         private PopResponse STAT()
         {
-            /* Loop through, loading the message size ofr each one. */
-            long totalBytes = this.uniqueIDs.Select(uniqueID => mailbox.MessageSize(this, uniqueID)).Sum();
+            /* Collect the not-flagged messages. */
+            var countedUniqueIDs = this.uniqueIDs.Except(this.deletedUniqueIDs).ToList();
+
+            /* Loop through, loading the message size for each one. */
+            long totalBytes = countedUniqueIDs.Select(uniqueID => mailbox.MessageSize(this, uniqueID)).Sum();
 
             /* Return response. */
-            return PopResponse.OKSingle($"{this.uniqueIDs.Count} {totalBytes}");
+            return PopResponse.OKSingle($"{countedUniqueIDs.Count} {totalBytes}");
         }
 
         private PopResponse LIST(string id)
