@@ -140,30 +140,13 @@ namespace billpg.pop3svc
         void IDisposable.Dispose() 
             => Stop();
 
-        public IPOP3MailboxProvider Provider 
+        public IPOP3MailboxProvider Provider
         { 
             get { return this.mailboxProvider;  }
             set
             {
                 /* Store the provider and pass along the new message event handler. */
                 this.mailboxProvider = value ?? NullMailboxProvider.Singleton;
-                this.mailboxProvider.RegisterNewMessageAction(OnNewMessage);
-            }
-        }
-
-        private void OnNewMessage(string userIDWithNewMessage)
-        {
-            lock (this.mutex)
-            {
-                foreach (var con in this.connections)
-                {
-                    /* Fetch the user ID for this handler. */
-                    string userIDForHandler = ((IPOP3ConnectionInfo)con.handler).UserID;
-
-                    /* If this user has new messages, raise the flag. */
-                    if (userIDWithNewMessage == userIDForHandler)
-                        con.handler.UserHasNewMessages();
-                }
             }
         }
     }

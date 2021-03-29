@@ -15,7 +15,6 @@ namespace billpg.pop3svc
     {
         string Name { get; }
         IPOP3Mailbox Authenticate(IPOP3ConnectionInfo info, string username, string password);
-        void RegisterNewMessageAction(RaiseNewMessageEvent onNewMessage);
     }
 
     internal class NullMailboxProvider : IPOP3MailboxProvider
@@ -26,15 +25,10 @@ namespace billpg.pop3svc
 
         public IPOP3Mailbox Authenticate(IPOP3ConnectionInfo info, string username, string password)
             => null;
-
-        public void RegisterNewMessageAction(RaiseNewMessageEvent onNewMessage)
-        {
-        }
     }
 
     public interface IPOP3Mailbox
     {
-        string UserID(IPOP3ConnectionInfo info);
         IList<string> ListMessageUniqueIDs(IPOP3ConnectionInfo info);
         bool MessageExists(IPOP3ConnectionInfo info, string uniqueID);
         long MessageSize(IPOP3ConnectionInfo into, string uniqueID);
@@ -96,7 +90,6 @@ namespace billpg.pop3svc
     {
         System.Net.IPAddress ClientIP { get; }
         long ConnectionID { get; }
-        string UserID { get; }
         string UserNameAtLogin { get; }
         bool IsSecure { get; }
         object ProviderTag { get; set; }

@@ -26,7 +26,6 @@ namespace billpg.pop3svc
             }
         }
 
-        private string userid = null;
         private string unauthUserName = null;
         private string userNameAtLogin = null;
         private IPOP3Mailbox mailbox = null;
@@ -39,8 +38,6 @@ namespace billpg.pop3svc
         System.Net.IPAddress IPOP3ConnectionInfo.ClientIP => activeConnection.ClientIP;
 
         long IPOP3ConnectionInfo.ConnectionID => activeConnection.connectionID;
-
-        string IPOP3ConnectionInfo.UserID => authenticated ? userid : null;
 
         string IPOP3ConnectionInfo.UserNameAtLogin => authenticated ? userNameAtLogin : null;
 
@@ -55,12 +52,12 @@ namespace billpg.pop3svc
             /* Standard CAPA Tags. (Not including STLS/USER as will be added only if applicable.) */
             "TOP", "RESP-CODES", "PIPELINING", "UIDL", "AUTH-RESP-CODE",
             /* Mine. */
-            "UID-PARAM", "REFR", "MULTI-LINE-IND", "ALARMS"
+            "UID-PARAM", "REFR", "MULTI-LINE-IND"
         }.AsReadOnly();
 
         private static readonly IList<string> allowedUnauth = new List<string>
         {
-            "NOOP", "CAPA", "USER", "PASS", "XLOG", "STLS", "QUIT", "ALAR"
+            "NOOP", "CAPA", "USER", "PASS", "XLOG", "STLS", "QUIT"
         }.AsReadOnly();
 
         private static PopResponse BadCommandSyntaxResponse => PopResponse.ERR("Bad command syntax.");
@@ -111,7 +108,6 @@ namespace billpg.pop3svc
                     case "QUIT": return QUIT();
                     case "RSET": return RSET();
                     case "REFR": return REFR();
-                    case "ALAR": return ALAR(pars);
                     default:
                         return PopResponse.ERR("Unknown command: " + command);
                 }
@@ -196,7 +192,6 @@ namespace billpg.pop3svc
                 /* Collect the authenticated user ID. */
                 this.userNameAtLogin = unauthUserName;
                 this.unauthUserName = null;
-                this.userid = this.mailbox.UserID(this);
 
                 /* Fix the collecton of messages IDs for this session. */
                 this.uniqueIDs = mailbox.ListMessageUniqueIDs(this).ToList().AsReadOnly();
@@ -440,10 +435,6 @@ namespace billpg.pop3svc
         private PopResponse NOOP()
             => PopResponse.OKSingle("There's no-one here but us POP3 services.");        
 
-        private PopResponse ALAR(string pars)
-        {
-            throw new NotImplementedException();
-        }
 
         private void ParseForUniqueId(string id, out int messageID, out string uniqueID)
         {

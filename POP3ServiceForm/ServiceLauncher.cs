@@ -65,26 +65,11 @@ namespace Pop3ServiceForm
         bool IPOP3Mailbox.MailboxIsReadOnly(IPOP3ConnectionInfo info) => false;
         static void DoNothing()
         { }
-        string nextUserID = null;
-        RaiseNewMessageEvent onNewMessage;
-
-        void IPOP3MailboxProvider.RegisterNewMessageAction(RaiseNewMessageEvent onNewMessage)
-        {
-            this.onNewMessage = onNewMessage;
-        }
 
         IPOP3Mailbox IPOP3MailboxProvider.Authenticate(IPOP3ConnectionInfo info, string user, string pass)
         {
             bool isAuth = (bool)this.Invoke(new Func<bool>(Internal));
-            if (isAuth)
-            {
-                this.nextUserID = user;
-                return this;
-            }
-            else
-            {
-                return null;
-            }
+            return isAuth ? this : null;
 
             bool Internal()
             {
@@ -97,13 +82,6 @@ namespace Pop3ServiceForm
                 return false;
             }
         }
-    
-        string IPOP3Mailbox.UserID(IPOP3ConnectionInfo info)
-        {
-            string userID = this.nextUserID;
-            this.nextUserID = null;
-            return userID;
-        }
 
         IList<string> IPOP3Mailbox.ListMessageUniqueIDs(IPOP3ConnectionInfo info)
         {
@@ -113,13 +91,13 @@ namespace Pop3ServiceForm
 
             void Internal()
             {
-                uniqueIDs = UserByName(info.UserID).Messages.Keys.ToList();
+                uniqueIDs = UserByName(info.UserNameAtLogin).Messages.Keys.ToList();
             }
         }
 
         bool IPOP3Mailbox.MessageExists(IPOP3ConnectionInfo info, string uniqueID)
-            => false;
-
+            => ((IPOP3Mailbox)this).ListMessageUniqueIDs(info).Contains(uniqueID);
+        
         bool ShowMessageDeleteForm(string user, IList<string> messages)
         {
             var formResponse = MessageBox.Show(this, $"Delete {string.Join(",", messages)} ?", "Delete", MessageBoxButtons.YesNo);
@@ -142,7 +120,7 @@ namespace Pop3ServiceForm
             return (long)Invoke(new Func<long>(Internal));
             long Internal()
             {
-                return UserByName(into.UserID).Messages[uniqueID].AsRfc822.Length;
+                return UserByName(into.UserNameAtLogin).Messages[uniqueID].AsRfc822.Length;
             }
         }
 
@@ -154,7 +132,7 @@ namespace Pop3ServiceForm
             return (IMessageContent)Invoke(new Func<IMessageContent>(Internal));
             IMessageContent Internal()
             {
-                string rfc = UserByName(info.UserID).Messages[uniqueID].AsRfc822;
+                string rfc = UserByName(info.UserNameAtLogin).Messages[uniqueID].AsRfc822;
                 var lines = rfc.Split('\r').Select(line => line.Trim()).ToList();
                 return new WrapList(lines);
             }
@@ -189,7 +167,7 @@ namespace Pop3ServiceForm
             Invoke(new Action(Internal));
             void Internal()
             {
-                var user = UserByName(info.UserID);
+                var user = UserByName(info.UserNameAtLogin);
                 foreach (var msgToRemove in uniqueIDs)
                     user.Messages.Remove(msgToRemove);
 
@@ -229,7 +207,6 @@ namespace Pop3ServiceForm
             {
                 SelectedUser.Messages[frm.UniqueID] = frm.AsMessageRecord;
                 RefreshMessagesView();
-                onNewMessage(SelectedUser.User);
             }
         }
 
