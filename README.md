@@ -50,16 +50,11 @@ The service will call through to this provider object to handle login requests.
   - Returns the name of this provider object. Will be shown to clients in the connection banner.
 - ```Authenticate(info, username, password)```
   - Passes a uername and password. Provider object should test the supplied credentials for validity and either return an object that implements the ```IPOP3Mailbox``` interface, or NULL to reject the login request.
-- ```RegisterNewMessageAction(action)```
-  - Not yet implemented but aded for planned expansion. Provider objects should implement this with an empty function. 
 
 ### IPOP3Mailbox
 
 The service will call through to this provider object to handle requsts to access the contents of messages.
 
-- ```UserID(info)```
-  - Return the user ID for this user. This ID is the single ID that uniquely identifies a user. 
-  - A user might login as "bob", "BOB" or "bob@here", but this function allows the provider to normalize all those names into just "bob".
 - ```ListMessageUniqueIDs(info)```
   - Called when the service needs a "directory listing". The provider should return a collection of strings that identify the messages available to the user. 
   - If the user's mailbox is empty, this function should return an empty collection.
