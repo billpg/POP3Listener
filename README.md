@@ -38,6 +38,10 @@ listen.ListenOn(IPAddress.Any, 995, true);
 
 The provider object needs to implement the interface ```IPOP3MailboxProvider```. This object will handle login requests when they come in.
 
+If dry references don't grab you, I've written a short introduction that walk through the process of writing a very simple POP3 service that reads email files from a folder on your computer. [Write Your Own POP3 Service.][4]
+
+[4]: https://billpg.com/pop3-write-your-own/
+
 ### IPOP3MailboxProvider
 
 The service will call through to this provider object to handle login requests.
