@@ -22,9 +22,11 @@ namespace billpg.pop3svc
                 string withBrackets = string.IsNullOrEmpty(providerName) ? "" : $"({providerName}) ";
 
                 /* Completed string. */
-                return $"billpg industries POP3 Service {withBrackets}https://billpg.com/POP3/";
+                return $"billpg industries POP3 Service {ServiceVersion} {withBrackets}https://billpg.com/POP3/";
             }
         }
+        private string ServiceVersion => this.GetType().Assembly.GetName().Version.ToString();
+
 
         private string unauthUserName = null;
         private string userNameAtLogin = null;
@@ -120,6 +122,9 @@ namespace billpg.pop3svc
 
             /* Add IMPLEMENTATION from provider. */
             resp.Insert(0, "IMPLEMENTATION " + serviceDescription);
+
+            /* Add CAPA-VERSION. */
+            resp.Insert(0, $"CAPA-VERSION "+ ServiceVersion);
 
             /* Add STLS only if we have a TLS cert and not already secure. */
             if (activeConnection.IsSecure == false && service.SecureCertificate != null)
