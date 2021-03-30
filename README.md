@@ -92,8 +92,6 @@ Many calls to the above interfaces from the service engine will supply an "info"
   - The source IP address of the current connection.
 - ```ConnectionID```
   - The internal connection identifier used by the service.
-- ```UserID```
-  - The user ID of this mailbox, as normalized by the UserID function documented above.
 - ```UserNameAtLogin```
   - The user name supplied by the user on login.
 - ```IsSecure```
