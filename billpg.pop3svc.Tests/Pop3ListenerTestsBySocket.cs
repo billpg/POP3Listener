@@ -199,7 +199,7 @@ namespace billpg.pop3svc.Tests
         }
 
         [TestMethod]
-        public void POP3_REFR()
+        public void POP3_CORE()
         {
             RunTestLoggedIn(Internal);
             void Internal(Stream str, UnitTestPOP3Provider prov)
@@ -238,7 +238,7 @@ namespace billpg.pop3svc.Tests
                                 {
                                     WriteLine(str, "DELE UID:" + deleteID);
                                     var deleResp = ReadLine(str);
-                                    Assert.AreEqual($"+OK Message UID:{deleteID} flagged for delete on QUIT or REFR.", deleResp);
+                                    Assert.AreEqual($"+OK Message UID:{deleteID} flagged for delete on QUIT or CORE.", deleResp);
                                     expectedDeletedByServer++;
                                 }
                             }
@@ -253,7 +253,7 @@ namespace billpg.pop3svc.Tests
                             }
 
                             /* Refresh, committing the above deletes. expecting no new messages. */
-                            WriteLine(str, "REFR");
+                            WriteLine(str, "CORE");
                             var refrResp = ReadLine(str);
                             string expectedActvityCode = (countToAdd == 0) ? "NONE" : "NEW";
                             Assert.AreEqual($"+OK [ACTIVITY/{expectedActvityCode}] Refreshed. Deleted {expectedDeletedByServer} messages.", refrResp);
@@ -309,7 +309,7 @@ namespace billpg.pop3svc.Tests
                 CollectionAssert.Contains(prov.uniqueIdsInMailbox, uid);
 
                 /* Commit. */
-                WriteLine(str, "REFR");
+                WriteLine(str, "CORE");
                 var commResp = ReadLine(str);
                 Assert.IsTrue(commResp.StartsWith("+OK "));
 
@@ -382,13 +382,13 @@ namespace billpg.pop3svc.Tests
                 /* Delete the message without a message id? */
                 WriteLine(str, $"DELE UID:{uniqueIDNew}");
                 var deleOneResp = ReadLine(str);
-                Assert.AreEqual($"+OK Message UID:{uniqueIDNew} flagged for delete on QUIT or REFR.", deleOneResp);
+                Assert.AreEqual($"+OK Message UID:{uniqueIDNew} flagged for delete on QUIT or CORE.", deleOneResp);
 
                 /* Delete a normal message too. */
                 string normalUniqueIdToDelete = prov.uniqueIdsInMailbox[84];
                 WriteLine(str, $"DELE UID:{normalUniqueIdToDelete}");
                 var deleTwoResp = ReadLine(str);
-                Assert.AreEqual($"+OK Message UID:{normalUniqueIdToDelete} flagged for delete on QUIT or REFR.", deleTwoResp);
+                Assert.AreEqual($"+OK Message UID:{normalUniqueIdToDelete} flagged for delete on QUIT or CORE.", deleTwoResp);
 
                 /* Check the two selected uniqueIDs are still there. */
                 Assert.IsTrue(prov.uniqueIdsInMailbox.Contains(uniqueIDNew));
