@@ -54,7 +54,7 @@ namespace billpg.pop3svc
             /* Standard CAPA Tags. (Not including STLS/USER as will be added only if applicable.) */
             "TOP", "RESP-CODES", "PIPELINING", "UIDL", "AUTH-RESP-CODE",
             /* Mine. */
-            "UID-PARAM", "REFR", "MULTI-LINE-IND"
+            "UID-PARAM", "CORE", "MULTI-LINE-IND"
         }.AsReadOnly();
 
         private static readonly IList<string> allowedUnauth = new List<string>
@@ -110,7 +110,7 @@ namespace billpg.pop3svc
                     case "DELI": return DELI(pars);
                     case "QUIT": return QUIT();
                     case "RSET": return RSET();
-                    case "REFR": return REFR();
+                    case "CORE": return CORE();
                     default:
                         return PopResponse.ERR("Unknown command: " + command);
                 }
@@ -439,7 +439,7 @@ namespace billpg.pop3svc
             return PopResponse.OKSingle("Un-flagged all messages flagged for delete.");
         }
 
-        private PopResponse REFR()
+        private PopResponse CORE()
         {
             /* Collect the new list of messages from the mailbox to detect new messages. */
             var nextUniqueIDs = this.mailbox.ListMessageUniqueIDs(this).ToList();
