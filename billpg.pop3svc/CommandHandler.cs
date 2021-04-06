@@ -107,6 +107,7 @@ namespace billpg.pop3svc
                     case "RETR": return RETR(pars);
                     case "TOP":  return TOP(pars);
                     case "DELE": return DELE(pars);
+                    case "DELI": return DELI(pars);
                     case "QUIT": return QUIT();
                     case "RSET": return RSET();
                     case "REFR": return REFR();
@@ -354,6 +355,33 @@ namespace billpg.pop3svc
              
         private PopResponse DELE(string pars)
         {
+            return DeleteWrapper(pars, Internal);
+            PopResponse Internal(string uniqueID)
+            {
+                /* Add the unique-id to the list of flags and return success. */
+                deletedUniqueIDs.Add(uniqueID);
+                return PopResponse.OKSingle($"Message UID:{uniqueID} flagged for delete on QUIT or REFR.");
+            }
+        }
+
+        private PopResponse DELI(string pars)
+        {
+            return DeleteWrapper(pars, Internal);
+            PopResponse Internal(string uniqueID)
+            {
+                /* Delete this single message with the mailbox provider. */
+                this.mailbox.MessageDelete(this, new List<string> { uniqueID }.AsReadOnly());
+
+                /* Store this id so it will be excluded from future LIST/UIDL/tec. */
+                this.deletedUniqueIDs.Add(uniqueID);
+
+                /* Return success. */
+                return PopResponse.OKSingle($"Deleted message. UID:{uniqueID}");
+            }
+        }
+
+        private PopResponse DeleteWrapper(string pars, Func<string, PopResponse> action)
+        {
             /* If no parameters, error. */
             if (string.IsNullOrEmpty(pars))
                 return BadCommandSyntaxResponse;
@@ -365,9 +393,8 @@ namespace billpg.pop3svc
             /* Parse for unique ID. Will also check if message is already flagged. */
             ParseForUniqueId(pars, out _, out string uniqueID);
 
-            /* Add the unique-id to the list of flags and return success. */
-            deletedUniqueIDs.Add(uniqueID);
-            return PopResponse.OKSingle($"Message UID:{uniqueID} flagged for delete on QUIT or REFR.");
+            /* Pass control back to caller. */
+            return action(uniqueID);
         }
 
         private PopResponse QUIT()
