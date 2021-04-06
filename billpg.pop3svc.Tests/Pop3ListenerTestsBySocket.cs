@@ -431,6 +431,68 @@ namespace billpg.pop3svc.Tests
             }
         }
 
+        [TestMethod]
+        public void POP3_DELI()
+        {
+            RunTestLoggedIn(Internal);
+            void Internal(Stream str, UnitTestPOP3Provider prov)
+            {
+                /* Collect UIDL. */
+                WriteLine(str, "UIDL");
+                var uidl1 = ReadMultiLineIfOkay(str);
+                Assert.AreEqual(101, uidl1.Count);
+
+                /* Delete a message with a numeric ID. */
+                string deletedID1 = prov.uniqueIdsInMailbox[11];
+                WriteLine(str, "DELI 12");
+                var deliResp1 = ReadLine(str);
+                Assert.AreEqual($"+OK Deleted message. UID:{deletedID1}", deliResp1);
+                Assert.AreEqual(99, prov.uniqueIdsInMailbox.Count);
+                Assert.IsFalse(prov.uniqueIdsInMailbox.Contains(deletedID1));
+
+                /* Perform another UIDL, expecting a gap at 12. */
+                WriteLine(str, "UIDL");
+                var uidl2 = ReadMultiLineIfOkay(str);
+                Assert.AreEqual(100, uidl2.Count);
+                Assert.IsTrue(uidl2.Where(l => l.StartsWith("11 ")).Any());
+                Assert.IsFalse(uidl2.Where(l => l.StartsWith("12 ")).Any());
+                Assert.IsTrue(uidl2.Where(l => l.StartsWith("13 ")).Any());
+                Assert.AreEqual(uidl1[58], uidl2[57]);
+
+                /* Delete by a known unique ID. */
+                string deletedID2 = prov.uniqueIdsInMailbox[28];
+                WriteLine(str, $"DELI UID:{deletedID2}");
+                string deliResp2 = ReadLine(str);
+                Assert.AreEqual($"+OK Deleted message. UID:{deletedID2}", deliResp2);
+
+                /* UIDL again. */
+                WriteLine(str, "UIDL");
+                var uidl3 = ReadMultiLineIfOkay(str);
+                Assert.AreEqual(99, uidl3.Count);
+                Assert.IsTrue(uidl3.Where(l => l.StartsWith("11 ")).Any());
+                Assert.IsFalse(uidl3.Where(l => l.StartsWith("12 ")).Any());
+                Assert.IsTrue(uidl3.Where(l => l.StartsWith("13 ")).Any());
+                Assert.IsTrue(uidl3.Where(l => l.StartsWith("29 ")).Any());
+                Assert.IsFalse(uidl3.Where(l => l.StartsWith("30 ")).Any());
+                Assert.IsTrue(uidl3.Where(l => l.StartsWith("31 ")).Any());
+                Assert.AreEqual(uidl1[58], uidl3[56]);
+
+                /* Add an ID behind the scenes. */
+                string deletedID3 = $"{Guid.NewGuid():N}";
+                prov.uniqueIdsInMailbox.Insert(0, deletedID3);
+
+                /* Delete that unknown message by its ID. */
+                WriteLine(str, $"DELI UID:{deletedID3}");
+                string deliResp3 = ReadLine(str);
+                Assert.AreEqual($"+OK Deleted message. UID:{deletedID3}", deliResp3);
+
+                /* Check UIDL is the same. */
+                WriteLine(str, "UIDL");
+                var uidl4 = ReadMultiLineIfOkay(str);
+                CollectionAssert.AreEqual(uidl3, uidl4);
+            }
+        }
+
         private List<string> ReadMultiLineIfOkay(Stream str)
         {
             /* Read the first line. */
