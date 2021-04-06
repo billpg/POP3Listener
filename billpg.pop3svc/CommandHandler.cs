@@ -360,7 +360,7 @@ namespace billpg.pop3svc
             {
                 /* Add the unique-id to the list of flags and return success. */
                 deletedUniqueIDs.Add(uniqueID);
-                return PopResponse.OKSingle($"Message UID:{uniqueID} flagged for delete on QUIT or REFR.");
+                return PopResponse.OKSingle($"Message UID:{uniqueID} flagged for delete on QUIT or CORE.");
             }
         }
 
