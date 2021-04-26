@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\billpg.pop3svc\billpg.pop3svc.csproj" />
+    <ProjectReference Include="..\billpg.pop3svc\billpg.POP3Listener.csproj" />
   </ItemGroup>
 
 </Project>

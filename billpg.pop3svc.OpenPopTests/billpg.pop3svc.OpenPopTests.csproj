@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="..\..\Hackensplat.POP3Service\packages\MSTest.TestAdapter.2.1.1\build\net45\MSTest.TestAdapter.props" Condition="Exists('..\..\Hackensplat.POP3Service\packages\MSTest.TestAdapter.2.1.1\build\net45\MSTest.TestAdapter.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
@@ -62,9 +62,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\billpg.pop3svc\billpg.pop3svc.csproj">
+    <ProjectReference Include="..\billpg.pop3svc\billpg.POP3Listener.csproj">
       <Project>{70217b4d-0c6b-4eb1-87bf-763347485ff8}</Project>
-      <Name>billpg.pop3svc</Name>
+      <Name>billpg.POP3Listener</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
