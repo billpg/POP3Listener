@@ -22,7 +22,7 @@ namespace billpg.pop3
                 string withBrackets = string.IsNullOrEmpty(providerName) ? "" : $"({providerName}) ";
 
                 /* Completed string. */
-                return $"billpg industries POP3 Service {ServiceVersion} {withBrackets}https://billpg.com/POP3/";
+                return $"billpg industries POP3 Listener {ServiceVersion} {withBrackets}https://billpg.com/POP3/";
             }
         }
         private string ServiceVersion => this.GetType().Assembly.GetName().Version.ToString();

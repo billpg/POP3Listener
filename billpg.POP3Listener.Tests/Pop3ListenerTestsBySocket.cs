@@ -493,6 +493,31 @@ namespace billpg.pop3.Tests
             }
         }
 
+        [TestMethod]
+        public void POP3_CAPA()
+        {
+            RunTestLoggedIn(Internal);
+            void Internal(Stream str, UnitTestPOP3Provider prov)
+            {
+                /* Collect CAPA. */
+                WriteLine(str, "CAPA");
+                var capa = ReadMultiLineIfOkay(str);
+
+                /* Check the standard capabiltieies are present. */
+                Assert.IsTrue(capa.Contains("USER"));
+                Assert.IsTrue(capa.Contains("TOP"));
+                Assert.IsTrue(capa.Contains("UIDL"));
+                Assert.IsTrue(capa.Contains("RESP-CODES"));
+                Assert.IsTrue(capa.Contains("PIPELINING"));
+                Assert.IsTrue(capa.Contains("AUTH-RESP-CODE"));
+
+                /* Check my ones (that I'm keeping) are too. */
+                Assert.IsTrue(capa.Contains("CORE"));
+                Assert.IsTrue(capa.Contains("UID-PARAM"));
+                Assert.IsTrue(capa.Contains("DELI"));
+            }
+        }
+
         private List<string> ReadMultiLineIfOkay(Stream str)
         {
             /* Read the first line. */
