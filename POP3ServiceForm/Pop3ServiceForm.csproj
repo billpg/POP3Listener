@@ -93,7 +93,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\billpg.pop3svc\billpg.POP3Listener.csproj">
+    <ProjectReference Include="..\billpg.POP3Listener\billpg.POP3Listener.csproj">
       <Project>{70217b4d-0c6b-4eb1-87bf-763347485ff8}</Project>
       <Name>billpg.POP3Listener</Name>
     </ProjectReference>

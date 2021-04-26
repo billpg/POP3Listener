@@ -52,7 +52,7 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\billpg.pop3svc.Tests\UnitTestPOP3Provider.cs">
+    <Compile Include="..\billpg.POP3Listener.Tests\UnitTestPOP3Provider.cs">
       <Link>UnitTestPOP3Provider.cs</Link>
     </Compile>
     <Compile Include="POP3ListenerTests.cs" />
@@ -62,7 +62,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\billpg.pop3svc\billpg.POP3Listener.csproj">
+    <ProjectReference Include="..\billpg.POP3Listener\billpg.POP3Listener.csproj">
       <Project>{70217b4d-0c6b-4eb1-87bf-763347485ff8}</Project>
       <Name>billpg.POP3Listener</Name>
     </ProjectReference>

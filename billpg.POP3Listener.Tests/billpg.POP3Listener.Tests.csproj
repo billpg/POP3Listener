@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\billpg.pop3svc\billpg.POP3Listener.csproj" />
+    <ProjectReference Include="..\billpg.POP3Listener\billpg.POP3Listener.csproj" />
   </ItemGroup>
 
 </Project>
