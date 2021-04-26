@@ -20,16 +20,18 @@ So yes, next on my list of things to do is to use proper async reads. So don't b
 If you'd like to be even more impressed, here's the description of the extensions I wrote:
 - [Mailbox Refresh Mechanism][1]
 - [Goodbye to Numeric Message IDs][2]
-- [RFC drafting project][3]
+- [Delete Immediately][3]
+- [RFC drafting project][4]
 
 [1]: https://billpg.com/pop3-refr/
 [2]: https://billpg.com/pop3-message-ids/
-[3]: https://github.com/billpg/Pop3ExtRfc/
+[3]: https://billpg.com/pop3-deli/
+[4]: https://github.com/billpg/Pop3ExtRfc/
 
 ## How do I use it?
 
 ````
-var listen = new billpg.pop3svc.POP3Listener();
+var listen = new billpg.pop3.POP3Listener();
 listen.Provider = /* Your provider object. */ ;
 listen.SecureCertificate = /* Your PFK. */ ;
 listen.ListenOn(IPAddress.Any, 110, false);
@@ -39,9 +41,9 @@ listen.ListenOn(IPAddress.Any, 995, true);
 
 The provider object needs to implement the interface ```IPOP3MailboxProvider```. This object will handle login requests when they come in.
 
-If dry references don't grab you, I've written a short introduction that walk through the process of writing a very simple POP3 service that reads email files from a folder on your computer. [Write Your Own POP3 Service.][4]
+If dry references don't grab you, I've written a short introduction that walk through the process of writing a very simple POP3 service that reads email files from a folder on your computer. [Write Your Own POP3 Service.][5]
 
-[4]: https://billpg.com/pop3-write-your-own/
+[5]: https://billpg.com/pop3-write-your-own/
 
 ### IPOP3MailboxProvider
 
