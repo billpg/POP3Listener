@@ -11,8 +11,8 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using billpg.pop3svc;
-using billpg.pop3svc.Tests;
+using billpg.pop3;
+using billpg.pop3.Tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenPop.Pop3;
 

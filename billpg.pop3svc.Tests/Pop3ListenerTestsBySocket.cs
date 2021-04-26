@@ -2,7 +2,7 @@
 /* Copyright, William Godfrey 2021. All Rights Reserved. */
 /* https://billpg.com/POP3/ */
 
-using billpg.pop3svc;
+using billpg.pop3;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -14,7 +14,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 
-namespace billpg.pop3svc.Tests
+namespace billpg.pop3.Tests
 {
 
     [TestClass]

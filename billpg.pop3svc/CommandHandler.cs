@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace billpg.pop3svc
+namespace billpg.pop3
 {
     internal class CommandHandler: IPOP3ConnectionInfo
     {

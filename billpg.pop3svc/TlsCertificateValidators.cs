@@ -10,7 +10,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
-namespace billpg.pop3svc
+namespace billpg.pop3
 {
     public static class TlsCertificateValidators
     {

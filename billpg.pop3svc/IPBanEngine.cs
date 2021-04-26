@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Text;
 
-namespace billpg.pop3svc
+namespace billpg.pop3
 {
     /// <summary>
     /// Generic interface for a ban-by-IP address engine.

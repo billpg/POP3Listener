@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace billpg.pop3svc
+namespace billpg.pop3
 {
     internal class PopResponse
     {

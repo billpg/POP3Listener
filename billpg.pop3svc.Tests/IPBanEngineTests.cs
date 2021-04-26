@@ -10,7 +10,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace billpg.pop3svc.Tests
+namespace billpg.pop3.Tests
 {
     [TestClass]
     public class IPBanEngineTests

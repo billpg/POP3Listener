@@ -2,7 +2,7 @@
 /* Copyright, William Godfrey 2021. All Rights Reserved. */
 /* https://billpg.com/POP3/ */
 
-using billpg.pop3svc;
+using billpg.pop3;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +10,7 @@ using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
-namespace billpg.pop3svc.Tests
+namespace billpg.pop3.Tests
 {
     internal class UnitTestPOP3Provider : IPOP3MailboxProvider, IPOP3Mailbox
     {

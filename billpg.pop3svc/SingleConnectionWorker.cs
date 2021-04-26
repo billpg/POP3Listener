@@ -10,7 +10,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 
-namespace billpg.pop3svc
+namespace billpg.pop3
 {
     internal class SingleConnectionWorker
     {

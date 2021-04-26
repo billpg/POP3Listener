@@ -1,9 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <RootNamespace>billpg.pop3svc</RootNamespace>
-    <AssemblyName>billpg.pop3svc</AssemblyName>
+    <RootNamespace>billpg.pop3</RootNamespace>
+    <AssemblyName>billpg.POP3Listener</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

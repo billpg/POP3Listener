@@ -2,7 +2,7 @@
 /* Copyright, William Godfrey 2021. All Rights Reserved. */
 /* https://billpg.com/POP3/ */
 
-using billpg.pop3svc;
+using billpg.pop3;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -54,7 +54,7 @@ namespace PopAndCircumstance
         private void ThreadMain()
         {
             /* Launch the listener. */
-            var listen = new billpg.pop3svc.POP3Listener();
+            var listen = new billpg.pop3.POP3Listener();
             listen.Provider = this;
             foreach (int port in this.insecurePorts)
                 listen.ListenOn(IPAddress.Loopback, port, false);

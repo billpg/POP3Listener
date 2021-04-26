@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 
-namespace billpg.pop3svc
+namespace billpg.pop3
 {
     public class POP3Listener: IDisposable
     {

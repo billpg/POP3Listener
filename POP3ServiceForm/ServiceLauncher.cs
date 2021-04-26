@@ -2,7 +2,7 @@
 /* Copyright, William Godfrey 2021. All Rights Reserved. */
 /* https://billpg.com/POP3/ */
 
-using billpg.pop3svc;
+using billpg.pop3;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
