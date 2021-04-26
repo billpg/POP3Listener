@@ -1,15 +1,16 @@
-# pop3svc
-A POP3 Service for .net with pluggable mailbox providers.
+# billpg.POP3Listener
+
+A POP3 Listener for dot-net.
 
 ## What is it?
 
-This is a POP3 service, written using C#. The service is implemented using the "Listener" pattern where your code launches the service with a "provider" object that you write. The service listens for incoming requests on the configured ports and reads POP3 commands sent from the client. When the server needs a list of messages or the contents of a message, the service will invoke the provider object. This way, the service code deals with the complexity of talking protocol while your code is left with making the important decisions.
+A component of a POP3 service. Like ```TcpListener``` and ```HttpListener```, this component's job is to listen for incomming connections and to talk the protocol with clients. When the time comes to authenticate users or download messages, the library will call through to a "provider" object that you write. This way, the listener code deals with the blah-blah-blah of commands and responses while your code is left with the important tasks.
 
 ## But why?
 
 Because I thought you'd find it impressive.
 
-![](https://media.giphy.com/media/NInhSPmxCgaxq/giphy.gif)         
+![](https://media.giphy.com/media/eKNrUbDJuFuaQ1A37p/giphy.gif)         
 (That's you.)
 
 But as well as that, I wrote some extensions to POP3 and needed working code in the form of a prototype. I had already started a larger project to build a mail server library, so I decided to pull out the POP3 section and publish that as my prototype. The overall project is still in its early stage and using the one-thread-per-connection model, but this is good enough to move forward with writing these extensions into RFCs. It is with some irony that the point of one of these extensions is allow connections to be kept open in the long term. Having a thread open for each open connecton is not what you want.
