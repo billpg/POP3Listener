@@ -75,18 +75,6 @@ namespace billpg.pop3
         internal PopResponse Connect()
             => PopResponse.OKSingle(serviceDescription);
 
-        internal void UserHasNewMessages()
-        {
-            this.userHasNewMessages = true;
-        }
-
-        internal bool IsUserHasNewMessages()
-        {
-            bool flag = this.userHasNewMessages;
-            this.userHasNewMessages = false;
-            return flag;
-        }
-
         internal PopResponse Command(long commandSequenceID, string command, string pars)
         {
             /* Only these commands are allowed in un-authenticated state. */
