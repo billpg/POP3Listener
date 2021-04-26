@@ -54,7 +54,7 @@ namespace billpg.pop3
             /* Standard CAPA Tags. (Not including STLS/USER as will be added only if applicable.) */
             "TOP", "RESP-CODES", "PIPELINING", "UIDL", "AUTH-RESP-CODE",
             /* Mine. */
-            "UID-PARAM", "CORE", "MULTI-LINE-IND"
+            "UID-PARAM", "CORE", "MULTI-LINE-IND", "DELI"
         }.AsReadOnly();
 
         private static readonly IList<string> allowedUnauth = new List<string>
