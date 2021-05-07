@@ -36,6 +36,7 @@ namespace billpg.pop3
         private readonly List<string> deletedUniqueIDs = new List<string>();
         private readonly SingleConnectionWorker activeConnection;
         private bool userHasNewMessages = false;
+        private bool isSleeping = false;
 
         System.Net.IPAddress IPOP3ConnectionInfo.ClientIP => activeConnection.ClientIP;
 
@@ -54,12 +55,17 @@ namespace billpg.pop3
             /* Standard CAPA Tags. (Not including STLS/USER as will be added only if applicable.) */
             "TOP", "RESP-CODES", "PIPELINING", "UIDL", "AUTH-RESP-CODE",
             /* Mine. */
-            "UID-PARAM", "CORE", "MULTI-LINE-IND", "DELI"
+            "UID-PARAM", "CORE", "MULTI-LINE-IND", "DELI", "SLEE-WAKE"
         }.AsReadOnly();
 
         private static readonly IList<string> allowedUnauth = new List<string>
         {
             "NOOP", "CAPA", "USER", "PASS", "XLOG", "STLS", "QUIT"
+        }.AsReadOnly();
+
+        private static readonly IList<string> allowedSleeping = new List<string>
+        {
+            "NOOP", "WAKE", "QUIT"
         }.AsReadOnly();
 
         private static PopResponse BadCommandSyntaxResponse => PopResponse.ERR("Bad command syntax.");
@@ -81,27 +87,33 @@ namespace billpg.pop3
             if (this.authenticated == false && allowedUnauth.Contains(command) == false)
                 return PopResponse.ERR("Authenticate first.");
 
-                /* Switch for command. */
-                switch (command)
-                {
-                    case "NOOP": return NOOP();
-                    case "CAPA": return CAPA();
-                    case "USER": return USER(pars);
-                    case "PASS": return PASS(pars);
-                    case "XLOG": return XLOG(pars);
-                    case "STAT": return STAT();
-                    case "LIST": return LIST(pars);
-                    case "UIDL": return UIDL(pars);
-                    case "RETR": return RETR(pars);
-                    case "TOP":  return TOP(pars);
-                    case "DELE": return DELE(pars);
-                    case "DELI": return DELI(pars);
-                    case "QUIT": return QUIT();
-                    case "RSET": return RSET();
-                    case "CORE": return CORE();
-                    default:
-                        return PopResponse.ERR("Unknown command: " + command);
-                }
+            /* Check commands not allowed in sleeping state. */
+            if (this.isSleeping && allowedSleeping.Contains(command) == false)
+                return PopResponse.ERR("This command is not allowed in a sleeping state. (Only NOOP, QUIT or WAKE.)");
+
+            /* Switch for command. */
+            switch (command)
+            {
+                case "NOOP": return NOOP();
+                case "CAPA": return CAPA();
+                case "USER": return USER(pars);
+                case "PASS": return PASS(pars);
+                case "XLOG": return XLOG(pars);
+                case "STAT": return STAT();
+                case "LIST": return LIST(pars);
+                case "UIDL": return UIDL(pars);
+                case "RETR": return RETR(pars);
+                case "TOP":  return TOP(pars);
+                case "DELE": return DELE(pars);
+                case "DELI": return DELI(pars);
+                case "QUIT": return QUIT();
+                case "RSET": return RSET();
+                case "SLEE": return SLEE();
+                case "WAKE": return WAKE();
+                case "CORE": return CORE();
+                default:
+                    return PopResponse.ERR("Unknown command: " + command);
+            }
         }
 
         private PopResponse CAPA()
@@ -348,7 +360,7 @@ namespace billpg.pop3
             {
                 /* Add the unique-id to the list of flags and return success. */
                 deletedUniqueIDs.Add(uniqueID);
-                return PopResponse.OKSingle($"Message UID:{uniqueID} flagged for delete on QUIT or CORE.");
+                return PopResponse.OKSingle($"Message UID:{uniqueID} flagged for delete on QUIT, SLEE or CORE.");
             }
         }
 
@@ -409,13 +421,12 @@ namespace billpg.pop3
             messageCount = deletedUniqueIDs.Count;
 
             /* Send all the flagged unique IDs to the provider. */
-            mailbox.MessageDelete(this, deletedUniqueIDs);
+            mailbox.MessageDelete(this, deletedUniqueIDs.AsReadOnly());
 
             /* If we get here, the provider didn't throw an exception. 
              * This means the state has successfuly changed. 
              * Reset the internal state of this connection now its state has changed. */
             this.deletedUniqueIDs.Clear();
-            this.uniqueIDs = null;
         }
 
         private PopResponse RSET()
@@ -445,12 +456,51 @@ namespace billpg.pop3
             /* Store new set of unique IDs. */
             this.uniqueIDs = nextUniqueIDs.AsReadOnly();
 
-            /* Prepare user-has-new-messages response code. (Will lower flag if raised.) */
-            string newMessagesResponseCode = "ACTIVITY/" + (isNewMessages ? "NEW" : "NONE");
-
             /* Report success. */
-            return PopResponse.OKSingle(newMessagesResponseCode, $"Refreshed. Deleted {messageCount} messages.");
+            return PopResponse.OKSingle(ActivityResponseCode(isNewMessages), $"Refreshed. Deleted {messageCount} messages.");
         }
+
+        private PopResponse SLEE()
+        {
+            /* Reject if already sleeping. */
+            if (this.isSleeping)
+                return PopResponse.ERR("Already sleeping.");
+
+            /* Call the provider to finally delete the flagged messages. */
+            DeleteFlaggedMessages(out int messageCount);
+            this.deletedUniqueIDs.Clear();
+
+            /* Enter sleeing state. */
+            this.isSleeping = true;
+
+            /* Return success response. */
+            return PopResponse.OKSingle($"Zzzzz. Deleted {messageCount} messages.");
+        }
+
+        private PopResponse WAKE()
+        {
+            /* Reject if not sleeping. */
+            if (this.isSleeping == false)
+                return PopResponse.ERR("Not sleeping.");
+
+            /* Load a new set of unique IDs. */
+            var newUniqueIDs = this.mailbox.ListMessageUniqueIDs(this);
+
+            /* Check if there any new messages. */
+            bool isNewMessages = newUniqueIDs.Except(this.uniqueIDs).Any();
+
+            /* Store the new collection of uniqueIDs. */
+            this.uniqueIDs = newUniqueIDs.ToList().AsReadOnly();
+
+            /* Change back to awake state. */
+            this.isSleeping = false;
+
+            /* Return success. */
+            return PopResponse.OKSingle(ActivityResponseCode(isNewMessages), "Welcome back.");
+        }
+
+        private string ActivityResponseCode(bool isNewMessages)
+            => "ACTIVITY/" + (isNewMessages ? "NEW" : "NONE");
 
         private PopResponse NOOP()
             => PopResponse.OKSingle("There's no-one here but us POP3 services.");        

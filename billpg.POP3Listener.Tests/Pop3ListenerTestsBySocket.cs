@@ -21,9 +21,69 @@ namespace billpg.pop3.Tests
     public class Pop3ListenerTestsBySocket
     {
         internal static readonly UTF8Encoding UTF8 = new UTF8Encoding(false);
+        internal static readonly IEnumerable<bool> falseAndTrue = new List<bool>(){ false, true }.AsReadOnly();
 
         private int port995 => 9955;
         private int port110 => 1100;
+
+        [TestMethod]
+        public void POP3_SLEE_WAKE()
+        {
+            RunTestLoggedIn(Internal);
+            void Internal(Stream str, UnitTestPOP3Provider prov)
+            {
+                /* Loop many time, covering different action in the course of the connection. */
+                foreach (bool externalDeleteMassge in falseAndTrue)
+                    foreach (bool addMessage in falseAndTrue)
+                        foreach (bool deleMessage in falseAndTrue)
+                        {
+                            /* Delete message using DELE. */
+                            string selectedDele = prov.uniqueIdsInMailbox[50];
+                            if (deleMessage)
+                            {
+                                WriteLine(str, "DELE UID:" + selectedDele);
+                                var deleResp = ReadLine(str);
+                                Assert.AreEqual($"+OK Message UID:{selectedDele} flagged for delete on QUIT, SLEE or CORE.", deleResp);
+                            }
+
+                            /* Go to sleep. */
+                            WriteLine(str, "SLEE");
+                            var sleeResp = ReadLine(str);
+                            if (deleMessage)
+                                Assert.AreEqual("+OK Zzzzz. Deleted 1 messages.", sleeResp);
+                            else
+                                Assert.AreEqual("+OK Zzzzz. Deleted 0 messages.", sleeResp);
+
+                            /* Did it remove the message? */
+                            if (deleMessage)
+                                Assert.IsFalse(prov.uniqueIdsInMailbox.Contains(selectedDele));
+
+                            /* Some command don't work. */
+                            WriteLine(str, "UIDL");
+                            var uidlResp = ReadLine(str);
+                            Assert.AreEqual("-ERR This command is not allowed in a sleeping state. (Only NOOP, QUIT or WAKE.)", uidlResp);
+
+                            /* NOOP works. */
+                            WriteLine(str, "NOOP");
+                            var noopResp = ReadLine(str);
+                            Assert.AreEqual("+OK There's no-one here but us POP3 services.", noopResp);
+
+                            /* Delete or add a message during sleep. */
+                            if (externalDeleteMassge)
+                                prov.uniqueIdsInMailbox.RemoveAt(0);
+                            if (addMessage)
+                                prov.uniqueIdsInMailbox.Add($"{Guid.NewGuid()}");
+
+                            /* Wake up! */
+                            WriteLine(str, "WAKE");
+                            var wakeResp = ReadLine(str);
+                            if (addMessage)
+                                Assert.AreEqual("+OK [ACTIVITY/NEW] Welcome back.", wakeResp);
+                            else
+                                Assert.AreEqual("+OK [ACTIVITY/NONE] Welcome back.", wakeResp);
+                        }
+            }
+        }
 
         [TestMethod]
         public void POP3_TLS_995()
@@ -238,7 +298,7 @@ namespace billpg.pop3.Tests
                                 {
                                     WriteLine(str, "DELE UID:" + deleteID);
                                     var deleResp = ReadLine(str);
-                                    Assert.AreEqual($"+OK Message UID:{deleteID} flagged for delete on QUIT or CORE.", deleResp);
+                                    Assert.AreEqual($"+OK Message UID:{deleteID} flagged for delete on QUIT, SLEE or CORE.", deleResp);
                                     expectedDeletedByServer++;
                                 }
                             }
@@ -382,13 +442,13 @@ namespace billpg.pop3.Tests
                 /* Delete the message without a message id? */
                 WriteLine(str, $"DELE UID:{uniqueIDNew}");
                 var deleOneResp = ReadLine(str);
-                Assert.AreEqual($"+OK Message UID:{uniqueIDNew} flagged for delete on QUIT or CORE.", deleOneResp);
+                Assert.AreEqual($"+OK Message UID:{uniqueIDNew} flagged for delete on QUIT, SLEE or CORE.", deleOneResp);
 
                 /* Delete a normal message too. */
                 string normalUniqueIdToDelete = prov.uniqueIdsInMailbox[84];
                 WriteLine(str, $"DELE UID:{normalUniqueIdToDelete}");
                 var deleTwoResp = ReadLine(str);
-                Assert.AreEqual($"+OK Message UID:{normalUniqueIdToDelete} flagged for delete on QUIT or CORE.", deleTwoResp);
+                Assert.AreEqual($"+OK Message UID:{normalUniqueIdToDelete} flagged for delete on QUIT, SLEE or CORE.", deleTwoResp);
 
                 /* Check the two selected uniqueIDs are still there. */
                 Assert.IsTrue(prov.uniqueIdsInMailbox.Contains(uniqueIDNew));
