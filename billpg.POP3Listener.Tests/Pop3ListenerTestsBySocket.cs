@@ -312,11 +312,16 @@ namespace billpg.pop3.Tests
                                 addedIDs.Add(addedID);
                             }
 
-                            /* Refresh, committing the above deletes. expecting no new messages. */
-                            WriteLine(str, "CORE");
+                            /* Commit the deletes and go to sleep. */
+                            WriteLine(str, "SLEE");
+                            var sleeResp = ReadLine(str);
+                            Assert.AreEqual($"+OK Zzzzz. Deleted {expectedDeletedByServer} messages.", sleeResp);
+
+                            /* Refresh, checking new or no-new messages as expected. */
+                            WriteLine(str, "WAKE");
                             var refrResp = ReadLine(str);
                             string expectedActvityCode = (countToAdd == 0) ? "NONE" : "NEW";
-                            Assert.AreEqual($"+OK [ACTIVITY/{expectedActvityCode}] Refreshed. Deleted {expectedDeletedByServer} messages.", refrResp);
+                            Assert.AreEqual($"+OK [ACTIVITY/{expectedActvityCode}] Welcome back.", refrResp);
 
                             /* Check all deleted messages have gone. */
                             foreach (string shouldBeDeletedID in deletedIDs)
@@ -368,10 +373,15 @@ namespace billpg.pop3.Tests
                 /* Not deleted it yet. */
                 CollectionAssert.Contains(prov.uniqueIdsInMailbox, uid);
 
-                /* Commit. */
-                WriteLine(str, "CORE");
-                var commResp = ReadLine(str);
-                Assert.IsTrue(commResp.StartsWith("+OK "));
+                /* Commit and sleep. */
+                WriteLine(str, "SLEE");
+                var sleeResp = ReadLine(str);
+                Assert.IsTrue(sleeResp.StartsWith("+OK "));
+
+                /* Wake up and refresh. */
+                WriteLine(str, "WAKE");
+                var wakeResp = ReadLine(str);
+                Assert.IsTrue(wakeResp.StartsWith("+OK [ACTIVITY/NONE] "));
 
                 /* Now deleted, but the others are still there. */
                 CollectionAssert.DoesNotContain(prov.uniqueIdsInMailbox, uid);
@@ -572,7 +582,7 @@ namespace billpg.pop3.Tests
                 Assert.IsTrue(capa.Contains("AUTH-RESP-CODE"));
 
                 /* Check my ones (that I'm keeping) are too. */
-                Assert.IsTrue(capa.Contains("CORE"));
+                Assert.IsTrue(capa.Contains("SLEE-WAKE"));
                 Assert.IsTrue(capa.Contains("UID-PARAM"));
                 Assert.IsTrue(capa.Contains("DELI"));
             }

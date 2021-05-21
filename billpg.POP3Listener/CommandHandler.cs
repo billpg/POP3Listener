@@ -35,7 +35,6 @@ namespace billpg.pop3
         private IList<string> uniqueIDs = null;
         private readonly List<string> deletedUniqueIDs = new List<string>();
         private readonly SingleConnectionWorker activeConnection;
-        private bool userHasNewMessages = false;
         private bool isSleeping = false;
 
         System.Net.IPAddress IPOP3ConnectionInfo.ClientIP => activeConnection.ClientIP;
@@ -55,7 +54,7 @@ namespace billpg.pop3
             /* Standard CAPA Tags. (Not including STLS/USER as will be added only if applicable.) */
             "TOP", "RESP-CODES", "PIPELINING", "UIDL", "AUTH-RESP-CODE",
             /* Mine. */
-            "UID-PARAM", "CORE", "MULTI-LINE-IND", "DELI", "SLEE-WAKE"
+            "UID-PARAM", "MULTI-LINE-IND", "DELI", "SLEE-WAKE"
         }.AsReadOnly();
 
         private static readonly IList<string> allowedUnauth = new List<string>
@@ -110,7 +109,6 @@ namespace billpg.pop3
                 case "RSET": return RSET();
                 case "SLEE": return SLEE();
                 case "WAKE": return WAKE();
-                case "CORE": return CORE();
                 default:
                     return PopResponse.ERR("Unknown command: " + command);
             }
@@ -436,28 +434,6 @@ namespace billpg.pop3
 
             /* Repot success. */
             return PopResponse.OKSingle("Un-flagged all messages flagged for delete.");
-        }
-
-        private PopResponse CORE()
-        {
-            /* Collect the new list of messages from the mailbox to detect new messages. */
-            var nextUniqueIDs = this.mailbox.ListMessageUniqueIDs(this).ToList();
-
-            /* Look for at least one unique-id that isn't in the old collection. */
-            bool isNewMessages = nextUniqueIDs.Except(this.uniqueIDs).Any();
-
-            /* Remove the about-to-be-deleted messages. */
-            foreach (string uniqueIDToBeDeleted in this.deletedUniqueIDs)
-                nextUniqueIDs.Remove(uniqueIDToBeDeleted);
-
-            /* Call the provider to finally delete the flagged messages. */
-            DeleteFlaggedMessages(out int messageCount);
-
-            /* Store new set of unique IDs. */
-            this.uniqueIDs = nextUniqueIDs.AsReadOnly();
-
-            /* Report success. */
-            return PopResponse.OKSingle(ActivityResponseCode(isNewMessages), $"Refreshed. Deleted {messageCount} messages.");
         }
 
         private PopResponse SLEE()
