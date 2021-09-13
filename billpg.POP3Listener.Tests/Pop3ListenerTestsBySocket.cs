@@ -626,6 +626,52 @@ namespace billpg.pop3.Tests
             }
         }
 
+        [TestMethod]
+        public void POP3_UIDL_BadUniqueIDs() 
+            => UniqueIDValidation(false, "\r\n", "", " ", $"{(char)127}", "_", "\uD83D\uDC18", "\u0418", new string('J', 71));
+
+        [TestMethod]
+        public void POP3_UIDL_GoodUniqueIDs()
+            => UniqueIDValidation(true, "\\r\\n", "\"\"", "!", "~", "!~", "__", "\\uD83D\\uDC18", "\\u0418", new string('!', 70));
+
+        void UniqueIDValidation(bool expectedValid, params string[] uniqueIDs)
+        {
+            foreach (string badUniqueID in uniqueIDs)
+            {
+                using (POP3Listener listener = new POP3Listener())
+                {
+                    var prov = new UnitTestPOP3Provider();
+                    prov.uniqueIdsInMailbox = new List<string> { badUniqueID };
+                    listener.Provider = prov;
+                    listener.ListenOnHigh(IPAddress.Loopback);
+
+                    using (var tcp = new TcpClient())
+                    {
+                        /* Connect to the normal insecure port. */
+                        tcp.Connect("localhost", port110);
+                        var str = tcp.GetStream();
+
+                        /* Read the banner. */
+                        string banner = ReadLine(str);
+                        Assert.IsTrue(banner.StartsWith("+OK "));
+
+                        /* USER. */
+                        WriteLine(str, "USER me");
+                        string userResp = ReadLine(str);
+                        Assert.IsTrue(userResp.StartsWith("+OK "));
+
+                        /* PASS. The server should check the list of uniqueIDs here and reject if there are any bad ones. */
+                        WriteLine(str, "PASS passw0rd");
+                        string passResp = ReadLine(str);
+                        if (expectedValid)
+                            Assert.AreEqual("+OK Welcome.", passResp);
+                        else
+                            Assert.AreEqual("-ERR Unique ID strings must be printable ASCII only.", passResp);
+                    }
+                }
+            }
+        }
+
         private List<string> ReadMultiLineIfOkay(Stream str)
         {
             /* Read the first line. */

@@ -198,7 +198,7 @@ namespace billpg.pop3
                 this.unauthUserName = null;
 
                 /* Fix the collecton of messages IDs for this session. */
-                this.uniqueIDs = mailbox.ListMessageUniqueIDs(this).ToList().AsReadOnly();
+                this.uniqueIDs = RefreshUniqueIDsFromMailbox();
 
                 /* Set new state and return in the affimative */
                 return PopResponse.OKSingle("Welcome.");
@@ -215,6 +215,41 @@ namespace billpg.pop3
 
                 /* Send response with the "AUTH" flag, indicating the error is due to credentials and not a random fault. */
                 return badPasswordResponse();
+            }
+        }
+
+        private IList<string> RefreshUniqueIDsFromMailbox()
+        {
+            /* Load the new list of IDs from the mailbox interface object. */
+            var newUniqueIDs = mailbox.ListMessageUniqueIDs(this).ToList().AsReadOnly();
+
+            /* If any are outside 33-126, return with a critical error. Otherwise, return them. */
+            if (newUniqueIDs.All(IsGoodUniqueID))
+                return newUniqueIDs;
+            else
+                throw new POP3ResponseException("Unique ID strings must be printable ASCII only.", true);
+
+            /* Helper function that checks uniqueIDs for validity. */
+            bool IsGoodUniqueID(string uid)
+            {
+                /* Shortcut empty strings. */
+                if (string.IsNullOrEmpty(uid))
+                    return false;
+
+                /* Long strings are bad. */
+                if (uid.Length > 70)
+                    return false;
+
+                /* A single _ might be seen as a long response continuation. */
+                if (uid == "_")
+                    return false;
+
+                /* All characters must be '!' to '~'. */
+                if (uid.Any(ch => (int)ch < (int)'!' || (int)ch > (int)'~'))
+                    return false;
+
+                /* Otherwise its fine. */
+                return true;
             }
         }
 
@@ -460,7 +495,7 @@ namespace billpg.pop3
                 return PopResponse.ERR("Not sleeping.");
 
             /* Load a new set of unique IDs. */
-            var newUniqueIDs = this.mailbox.ListMessageUniqueIDs(this);
+            var newUniqueIDs = RefreshUniqueIDsFromMailbox();
 
             /* Check if there any new messages. */
             bool isNewMessages = newUniqueIDs.Except(this.uniqueIDs).Any();
