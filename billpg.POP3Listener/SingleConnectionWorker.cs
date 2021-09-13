@@ -132,6 +132,11 @@ namespace billpg.pop3
                         /* Hand control over to TLS. */
                         ToTLS();
 
+                        /* Clear the buffered bytes that could have been piggy-backed prior to TLS. */
+                        readBufferStartIndex = 0;
+                        readBufferUsedCount = 0;
+                        expectLF = false;
+
                         /* Skip the rest and jump back to waiting for a command. */
                         continue;
                     }

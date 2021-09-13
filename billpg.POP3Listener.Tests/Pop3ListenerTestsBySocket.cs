@@ -120,6 +120,44 @@ namespace billpg.pop3.Tests
         }
 
         [TestMethod]
+        public void POP3_STLS_PostInjection()
+        {
+            using (POP3Listener listener = new POP3Listener())
+            {
+                listener.Provider = new UnitTestPOP3Provider();
+                listener.ListenOnHigh(IPAddress.Loopback);
+                listener.SecureCertificate = UnitTestPOP3Provider.selfSigned;
+
+                using (var tcp = new TcpClient())
+                {
+                    /* Connect to the normal insecure port. */
+                    tcp.Connect("localhost", port110);
+                    var str = tcp.GetStream();
+
+                    /* Read the banner. */
+                    string banner = ReadLine(str);
+                    Assert.IsTrue(banner.StartsWith("+OK "));
+
+                    /* Send STLS with an extra unauthorised command. */
+                    WriteLine(str, "STLS\r\nUSER doer-of-evil\r\nPASS Mwahahaha!");
+                    var respStls = ReadLine(str);
+                    Assert.IsTrue(respStls.StartsWith("+OK "));
+
+                    /* Hand over to TLS. */
+                    using (var tls = new SslStream(str, false, UnitTestPOP3Provider.CheckCert))
+                    {
+                        tls.AuthenticateAsClient("this.is.invalid");
+
+                        /* Send a command inside the TLS channel. The respoonse should be to CAPA, not USER. */
+                        WriteLine(tls, "CAPA");
+                        var respCapa = ReadMultiLineIfOkay(tls);
+                        Assert.IsTrue(respCapa.First().StartsWith("+OK Capa"));
+                    }
+                }
+            }
+        }
+
+        [TestMethod]
         public void POP3_STLS_110()
         {
             using (POP3Listener listener = new POP3Listener())
