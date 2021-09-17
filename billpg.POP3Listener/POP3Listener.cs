@@ -14,7 +14,6 @@ namespace billpg.pop3
         private readonly object mutex;
         private readonly List<TcpListener> listeners;
         private readonly List<SingleConnectionWorker> connections;
-        private IPOP3MailboxProvider mailboxProvider = NullMailboxProvider.Singleton;
         public IIPBanEngine IPBanEngine { get; set; } = new ThreeStrikesBanEngine();
         public IPOP3EventNotification EventNotification { get; set; } = NullEventNotification.Singleton;
         public bool RequireSecureLogin { get; set; }
@@ -30,6 +29,15 @@ namespace billpg.pop3
             listeners = new List<TcpListener>();
             connections = new List<SingleConnectionWorker>();
             RequireSecureLogin = true;
+        }
+
+        public string MailboxProviderName { get; set; } = null;
+
+        public delegate void OnAuthenticateDelegate(POP3AuthenticationRequest req);
+        public OnAuthenticateDelegate OnAuthenticate { set; get; } = NullAuthenticateRequest;
+        private static void NullAuthenticateRequest(POP3AuthenticationRequest req)
+        {
+            req.AllowRequest = false;
         }
 
         public void ListenOnStandard(IPAddress addr)
@@ -139,16 +147,6 @@ namespace billpg.pop3
 
         void IDisposable.Dispose() 
             => Stop();
-
-        public IPOP3MailboxProvider Provider
-        { 
-            get { return this.mailboxProvider;  }
-            set
-            {
-                /* Store the provider and pass along the new message event handler. */
-                this.mailboxProvider = value ?? NullMailboxProvider.Singleton;
-            }
-        }
     }
 }
 

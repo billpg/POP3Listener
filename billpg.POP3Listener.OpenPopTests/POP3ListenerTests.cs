@@ -28,7 +28,7 @@ namespace OpenPopTests
             /* Open a POP3 service. */
             using (POP3Listener listener = new POP3Listener())
             {
-                listener.Provider = new UnitTestPOP3Provider();
+                listener.OnAuthenticate = new UnitTestPOP3Provider().OnAuthenticateRequest;
                 listener.ListenOnStandard(IPAddress.Loopback);
 
                 /* Collection of deleted messages. */
@@ -116,7 +116,7 @@ namespace OpenPopTests
         {
             using (POP3Listener listener = new POP3Listener())
             {
-                listener.Provider = new UnitTestPOP3Provider();
+                listener.OnAuthenticate = new UnitTestPOP3Provider().OnAuthenticateRequest;
                 listener.ListenOnStandard(IPAddress.Loopback);
                 listener.SecureCertificate = UnitTestPOP3Provider.selfSigned;
 

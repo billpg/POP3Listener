@@ -12,13 +12,12 @@ namespace billpg.pop3
     internal class CommandHandler: IPOP3ConnectionInfo
     {
         private readonly POP3Listener service;
-        private IPOP3MailboxProvider provider => service.Provider;
         private string serviceDescription
         {
             get
             {
                 /* Load the provider's name and add brackets if used. */
-                string providerName = provider.Name;
+                string providerName = service.MailboxProviderName;
                 string withBrackets = string.IsNullOrEmpty(providerName) ? "" : $"({providerName}) ";
 
                 /* Completed string. */
@@ -187,15 +186,17 @@ namespace billpg.pop3
             if (this.authenticated)
                 return PopResponse.ERR("Already authenticated.");
 
-            /* Pass the user/pass combo to the provider. */
-            this.mailbox = provider.Authenticate(this, this.unauthUserName, claimedPassClear);
+            /* Construct an authentication request object and pass to provider. */
+            POP3AuthenticationRequest authreq = new POP3AuthenticationRequest(this, this.unauthUserName, claimedPassClear);
+            service.OnAuthenticate(authreq);
 
             /* Accepted? */
-            if (mailbox != null)
+            if (authreq.AllowRequest)
             {
                 /* Collect the authenticated user ID. */
                 this.userNameAtLogin = unauthUserName;
                 this.unauthUserName = null;
+                this.mailbox = authreq.MailboxProvider;
 
                 /* Fix the collecton of messages IDs for this session. */
                 this.uniqueIDs = RefreshUniqueIDsFromMailbox();
@@ -209,6 +210,7 @@ namespace billpg.pop3
             {
                 /* Reset attempted user. */
                 this.unauthUserName = null;
+                this.mailbox = null;
 
                 /* Raise the failed attempt count. */
                 this.service.IPBanEngine.RegisterFailedAttempt(clientIP);

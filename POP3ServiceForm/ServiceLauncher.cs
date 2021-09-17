@@ -19,7 +19,7 @@ using System.Windows.Forms;
 
 namespace Pop3ServiceForm
 {
-    public partial class ServiceLauncher : Form, IPOP3MailboxProvider, IPOP3Mailbox
+    public partial class ServiceLauncher : Form, IPOP3Mailbox
     {
         public ServiceLauncher()
         {
@@ -48,7 +48,8 @@ namespace Pop3ServiceForm
             pop3.ListenOnStandard(IPAddress.Loopback);
             pop3.RequireSecureLogin = true;
             pop3.SecureCertificate = cert;
-            pop3.Provider = this;
+            pop3.MailboxProviderName = "Pop3ServiceForm";
+            pop3.OnAuthenticate = OnAuthenticateHandler;
         }
 
         private void AddLogEntry(string entry)
@@ -61,21 +62,20 @@ namespace Pop3ServiceForm
             }
         }
 
-        string IPOP3MailboxProvider.Name => "Pop3ServiceForm";
         bool IPOP3Mailbox.MailboxIsReadOnly(IPOP3ConnectionInfo info) => false;
         static void DoNothing()
         { }
 
-        IPOP3Mailbox IPOP3MailboxProvider.Authenticate(IPOP3ConnectionInfo info, string user, string pass)
+        void OnAuthenticateHandler(POP3AuthenticationRequest req)
         {
-            bool isAuth = (bool)this.Invoke(new Func<bool>(Internal));
-            return isAuth ? this : null;
+            req.AllowRequest = (bool)this.Invoke(new Func<bool>(Internal));
+            req.MailboxProvider = this;
 
             bool Internal()
             {
                 foreach (var userAvail in AllUsers)
                 {
-                    if (userAvail.User == user && userAvail.Pass == pass)
+                    if (userAvail.User == req.SuppliedUsername && userAvail.Pass == req.SuppliedPassword)
                         return true;
                 }
 

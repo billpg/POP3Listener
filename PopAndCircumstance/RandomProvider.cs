@@ -11,7 +11,7 @@ using System.Threading;
 
 namespace PopAndCircumstance
 {
-    internal class RandomProvider : IPOP3MailboxProvider
+    internal class RandomProvider
     {
         private readonly ManualResetEvent stopEvent;
         private readonly Thread worker;
@@ -55,7 +55,7 @@ namespace PopAndCircumstance
         {
             /* Launch the listener. */
             var listen = new billpg.pop3.POP3Listener();
-            listen.Provider = this;
+            listen.OnAuthenticate = this.OnAuthenticateHandler;
             foreach (int port in this.insecurePorts)
                 listen.ListenOn(IPAddress.Loopback, port, false);
             foreach (int port in this.securePorts)
@@ -116,26 +116,29 @@ namespace PopAndCircumstance
         internal static string RandomEmail(params string[] except)
             => RandomEmail(except.AsEnumerable());
 
-        public IPOP3Mailbox Authenticate(IPOP3ConnectionInfo info, string username, string password)
+        internal void OnAuthenticateHandler(POP3AuthenticationRequest req)
         {
             /* Look for the claimed user record. */
-            ProviderUser user = users.SingleOrDefault(u => u.UserName == username);
+            ProviderUser user = users.SingleOrDefault(u => u.UserName == req.SuppliedUsername);
             if (user == null)
             {
-                LogWrite($"***** No such user {username} for login attempt by {info.ClientIP}");
-                return null;
+                LogWrite($"***** No such user {req.SuppliedUsername} for login attempt by {req.ConnectionInfo.ClientIP}");
+                req.AllowRequest = false;
+                return;
             }
 
             /* Does the password match? */
-            if (user.PassWord == password)
+            if (user.PassWord == req.SuppliedPassword)
             {
-                LogWrite($"***** Successful login by {username} by {info.ClientIP}");
-                return user;
+                LogWrite($"***** Successful login by {req.SuppliedUsername} by {req.ConnectionInfo.ClientIP}");
+                req.AllowRequest = true;
+                req.MailboxProvider = user;
+                return;
             }
 
             /* Wrong password. */
-            LogWrite($"***** Wrong password attempt for {username} by {info.ClientIP}");
-            return null;
+            LogWrite($"***** Wrong password attempt for {req.SuppliedUsername} by {req.ConnectionInfo.ClientIP}");
+            req.AllowRequest = false;
         }
 
         public void RegisterNewMessageAction(RaiseNewMessageEvent onNewMessage)

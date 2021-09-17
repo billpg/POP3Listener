@@ -14,14 +14,14 @@ namespace BuildYourOwnPop3Service
             /* Launch POP3. */
             var pop3 = new POP3Listener();
             /* Add just before the ListenOn call. */
-            pop3.Provider = new MyProvider();
+            //pop3.Provider = new MyProvider();
             pop3.ListenOn(IPAddress.Loopback, 110, false);
 
             /* Keep running until the process is killed. */
             while (true) System.Threading.Thread.Sleep(10000);
         }
     }
-
+#if false
     /* New class separate from the Program class. */
     class MyProvider : IPOP3MailboxProvider
     {
@@ -118,5 +118,5 @@ namespace BuildYourOwnPop3Service
         {
         }
     }
-
+#endif
 }

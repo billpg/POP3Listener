@@ -90,7 +90,7 @@ namespace billpg.pop3.Tests
         {
             using (POP3Listener listener = new POP3Listener())
             {
-                listener.Provider = new UnitTestPOP3Provider();
+                listener.OnAuthenticate = new UnitTestPOP3Provider().OnAuthenticateRequest;
                 listener.ListenOnHigh(IPAddress.Loopback);
                 listener.SecureCertificate = UnitTestPOP3Provider.selfSigned;
 
@@ -124,7 +124,7 @@ namespace billpg.pop3.Tests
         {
             using (POP3Listener listener = new POP3Listener())
             {
-                listener.Provider = new UnitTestPOP3Provider();
+                listener.OnAuthenticate = new UnitTestPOP3Provider().OnAuthenticateRequest;
                 listener.ListenOnHigh(IPAddress.Loopback);
                 listener.SecureCertificate = UnitTestPOP3Provider.selfSigned;
 
@@ -162,7 +162,7 @@ namespace billpg.pop3.Tests
         {
             using (POP3Listener listener = new POP3Listener())
             {
-                listener.Provider = new UnitTestPOP3Provider();
+                listener.OnAuthenticate = new UnitTestPOP3Provider().OnAuthenticateRequest;
                 listener.ListenOnHigh(IPAddress.Loopback);
                 listener.SecureCertificate = UnitTestPOP3Provider.selfSigned;
 
@@ -209,7 +209,7 @@ namespace billpg.pop3.Tests
             using (POP3Listener listener = new POP3Listener())
             {
                 var prov = new UnitTestPOP3Provider();
-                listener.Provider = prov;
+                listener.OnAuthenticate = prov.OnAuthenticateRequest;
                 listener.ListenOnHigh(IPAddress.Loopback);
 
                 using (var tcp = new TcpClient())
@@ -642,7 +642,7 @@ namespace billpg.pop3.Tests
                 {
                     var prov = new UnitTestPOP3Provider();
                     prov.uniqueIdsInMailbox = new List<string> { badUniqueID };
-                    listener.Provider = prov;
+                    listener.OnAuthenticate = prov.OnAuthenticateRequest;
                     listener.ListenOnHigh(IPAddress.Loopback);
 
                     using (var tcp = new TcpClient())

@@ -12,7 +12,7 @@ using System.Text;
 
 namespace billpg.pop3.Tests
 {
-    internal class UnitTestPOP3Provider : IPOP3MailboxProvider, IPOP3Mailbox
+    internal class UnitTestPOP3Provider : IPOP3Mailbox
     {
         public string Name => "UnitTest";
         bool IPOP3Mailbox.MailboxIsReadOnly(IPOP3ConnectionInfo info) => false;
@@ -33,6 +33,12 @@ namespace billpg.pop3.Tests
         public IPOP3Mailbox Authenticate(IPOP3ConnectionInfo info, string user, string pass)
         {
             return (user == "me" && pass == "passw0rd") ? this : null;
+        }
+
+        internal void OnAuthenticateRequest(POP3AuthenticationRequest req)
+        {
+            req.AllowRequest = req.SuppliedUsername == "me" && req.SuppliedPassword == "passw0rd";
+            req.MailboxProvider = this;
         }
 
         public string UserID(IPOP3ConnectionInfo info)

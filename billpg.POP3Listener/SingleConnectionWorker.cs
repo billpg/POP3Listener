@@ -21,7 +21,6 @@ namespace billpg.pop3
         internal readonly CommandHandler handler;
         private readonly Thread worker;
         internal readonly long connectionID;
-        internal IPOP3MailboxProvider provider => service.Provider;
         internal readonly AutoResetEvent waitEvent;
 
         private const byte CR = (byte)'\r';

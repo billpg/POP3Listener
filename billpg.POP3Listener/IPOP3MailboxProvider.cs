@@ -11,22 +11,6 @@ namespace billpg.pop3
 {
     public delegate void RaiseNewMessageEvent(string userID);
 
-    public interface IPOP3MailboxProvider
-    {
-        string Name { get; }
-        IPOP3Mailbox Authenticate(IPOP3ConnectionInfo info, string username, string password);
-    }
-
-    internal class NullMailboxProvider : IPOP3MailboxProvider
-    {
-        internal static readonly IPOP3MailboxProvider Singleton = new NullMailboxProvider();
-
-        public string Name => null;
-
-        public IPOP3Mailbox Authenticate(IPOP3ConnectionInfo info, string username, string password)
-            => null;
-    }
-
     public interface IPOP3Mailbox
     {
         IList<string> ListMessageUniqueIDs(IPOP3ConnectionInfo info);
