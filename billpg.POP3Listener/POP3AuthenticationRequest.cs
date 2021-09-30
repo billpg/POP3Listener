@@ -17,7 +17,7 @@ namespace billpg.pop3
             this.SuppliedPassword = suppliedPassword;
         }
 
-        public bool AllowRequest { get; set; } = false;
+        public string AuthUserID { get; set; } = null;
         public IPOP3Mailbox MailboxProvider { get; set; } = null;
     }
 }

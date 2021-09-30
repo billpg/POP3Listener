@@ -74,6 +74,7 @@ namespace billpg.pop3
     {
         System.Net.IPAddress ClientIP { get; }
         long ConnectionID { get; }
+        string AuthUserID { get; }
         string UserNameAtLogin { get; }
         bool IsSecure { get; }
         object ProviderTag { get; set; }

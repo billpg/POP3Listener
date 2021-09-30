@@ -210,6 +210,7 @@ namespace billpg.pop3.Tests
             {
                 var prov = new UnitTestPOP3Provider();
                 listener.OnAuthenticate = prov.OnAuthenticateRequest;
+                listener.OnListMailbox = prov.OnListMailboxRequest;
                 listener.ListenOnHigh(IPAddress.Loopback);
 
                 using (var tcp = new TcpClient())
@@ -643,6 +644,7 @@ namespace billpg.pop3.Tests
                     var prov = new UnitTestPOP3Provider();
                     prov.uniqueIdsInMailbox = new List<string> { badUniqueID };
                     listener.OnAuthenticate = prov.OnAuthenticateRequest;
+                    listener.OnListMailbox = prov.OnListMailboxRequest;
                     listener.ListenOnHigh(IPAddress.Loopback);
 
                     using (var tcp = new TcpClient())

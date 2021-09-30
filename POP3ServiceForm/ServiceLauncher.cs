@@ -68,18 +68,18 @@ namespace Pop3ServiceForm
 
         void OnAuthenticateHandler(POP3AuthenticationRequest req)
         {
-            req.AllowRequest = (bool)this.Invoke(new Func<bool>(Internal));
+            req.AuthUserID = (string)this.Invoke(new Func<string>(Internal));
             req.MailboxProvider = this;
 
-            bool Internal()
+            string Internal()
             {
                 foreach (var userAvail in AllUsers)
                 {
                     if (userAvail.User == req.SuppliedUsername && userAvail.Pass == req.SuppliedPassword)
-                        return true;
+                        return req.SuppliedUsername;
                 }
 
-                return false;
+                return null;
             }
         }
 

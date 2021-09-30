@@ -29,8 +29,9 @@ namespace billpg.pop3
 
         private string unauthUserName = null;
         private string userNameAtLogin = null;
+        private string authUserID = null;
         private IPOP3Mailbox mailbox = null;
-        private bool authenticated => mailbox != null;
+        private bool authenticated => authUserID != null;
         private IList<string> uniqueIDs = null;
         private readonly List<string> deletedUniqueIDs = new List<string>();
         private readonly SingleConnectionWorker activeConnection;
@@ -39,6 +40,8 @@ namespace billpg.pop3
         System.Net.IPAddress IPOP3ConnectionInfo.ClientIP => activeConnection.ClientIP;
 
         long IPOP3ConnectionInfo.ConnectionID => activeConnection.connectionID;
+
+        string IPOP3ConnectionInfo.AuthUserID => this.authUserID;
 
         string IPOP3ConnectionInfo.UserNameAtLogin => authenticated ? userNameAtLogin : null;
 
@@ -191,11 +194,12 @@ namespace billpg.pop3
             service.OnAuthenticate(authreq);
 
             /* Accepted? */
-            if (authreq.AllowRequest)
+            if (authreq.AuthUserID != null)
             {
                 /* Collect the authenticated user ID. */
                 this.userNameAtLogin = unauthUserName;
                 this.unauthUserName = null;
+                this.authUserID = authreq.AuthUserID;
                 this.mailbox = authreq.MailboxProvider;
 
                 /* Fix the collecton of messages IDs for this session. */
@@ -223,7 +227,7 @@ namespace billpg.pop3
         private IList<string> RefreshUniqueIDsFromMailbox()
         {
             /* Load the new list of IDs from the mailbox interface object. */
-            var newUniqueIDs = mailbox.ListMessageUniqueIDs(this).ToList().AsReadOnly();
+            var newUniqueIDs = this.service.OnListMailbox(this.authUserID).ToList().AsReadOnly();
 
             /* If any are outside 33-126, return with a critical error. Otherwise, return them. */
             if (newUniqueIDs.All(IsGoodUniqueID))

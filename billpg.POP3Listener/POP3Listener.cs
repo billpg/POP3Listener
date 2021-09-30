@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 
@@ -37,8 +38,12 @@ namespace billpg.pop3
         public OnAuthenticateDelegate OnAuthenticate { set; get; } = NullAuthenticateRequest;
         private static void NullAuthenticateRequest(POP3AuthenticationRequest req)
         {
-            req.AllowRequest = false;
+            /* Default, ensure the auth user id is null. */
+            req.AuthUserID = null;
         }
+
+        public delegate IEnumerable<string> OnListMailboxDelegate(string userID);
+        public OnListMailboxDelegate OnListMailbox { set; get; } = userID => Enumerable.Empty<string>();
 
         public void ListenOnStandard(IPAddress addr)
         {

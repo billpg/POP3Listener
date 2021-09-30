@@ -11,16 +11,29 @@ namespace BuildYourOwnPop3Service
     {
         static void Main()
         {
-            /* Launch POP3. */
+            /* Create POP3 Server. */
             var pop3 = new POP3Listener();
-            /* Add just before the ListenOn call. */
-            //pop3.Provider = new MyProvider();
+
+            /* Set authentication provider. */
+            pop3.OnAuthenticate = MyAuth;
+            void MyAuth(POP3AuthenticationRequest req)
+            {
+                if (req.SuppliedUsername == "me" && req.SuppliedPassword == "me")
+                {
+                    /* This User ID is authenticated. */
+                    req.AuthUserID = "me";
+                }
+            }
+
+            /* Start it listening. */
             pop3.ListenOn(IPAddress.Loopback, 110, false);
 
             /* Keep running until the process is killed. */
             while (true) System.Threading.Thread.Sleep(10000);
         }
     }
+}
+
 #if false
     /* New class separate from the Program class. */
     class MyProvider : IPOP3MailboxProvider
@@ -119,4 +132,3 @@ namespace BuildYourOwnPop3Service
         }
     }
 #endif
-}

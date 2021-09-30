@@ -123,7 +123,7 @@ namespace PopAndCircumstance
             if (user == null)
             {
                 LogWrite($"***** No such user {req.SuppliedUsername} for login attempt by {req.ConnectionInfo.ClientIP}");
-                req.AllowRequest = false;
+                req.AuthUserID = null;
                 return;
             }
 
@@ -131,14 +131,14 @@ namespace PopAndCircumstance
             if (user.PassWord == req.SuppliedPassword)
             {
                 LogWrite($"***** Successful login by {req.SuppliedUsername} by {req.ConnectionInfo.ClientIP}");
-                req.AllowRequest = true;
+                req.AuthUserID = req.SuppliedUsername;
                 req.MailboxProvider = user;
                 return;
             }
 
             /* Wrong password. */
             LogWrite($"***** Wrong password attempt for {req.SuppliedUsername} by {req.ConnectionInfo.ClientIP}");
-            req.AllowRequest = false;
+            req.AuthUserID = null;
         }
 
         public void RegisterNewMessageAction(RaiseNewMessageEvent onNewMessage)

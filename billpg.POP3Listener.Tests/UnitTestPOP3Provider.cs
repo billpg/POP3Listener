@@ -37,8 +37,17 @@ namespace billpg.pop3.Tests
 
         internal void OnAuthenticateRequest(POP3AuthenticationRequest req)
         {
-            req.AllowRequest = req.SuppliedUsername == "me" && req.SuppliedPassword == "passw0rd";
+            if (req.SuppliedUsername == "me" && req.SuppliedPassword == "passw0rd")
+                req.AuthUserID = "me-as-user-id";
             req.MailboxProvider = this;
+        }
+
+        internal IEnumerable<string> OnListMailboxRequest(string userID)
+        {
+            if (userID == "me-as-user-id")
+                return uniqueIdsInMailbox.ToList();
+            else
+                return Enumerable.Empty<string>();
         }
 
         public string UserID(IPOP3ConnectionInfo info)
