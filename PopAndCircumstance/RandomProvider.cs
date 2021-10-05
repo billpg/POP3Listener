@@ -161,7 +161,6 @@ namespace PopAndCircumstance
 
             internal IEnumerable<string> UniqueIDs => messages.Select(m => m.UniqueID);
             internal int MessageCount => messages.Count;
-            bool IPOP3Mailbox.MailboxIsReadOnly(IPOP3ConnectionInfo info) => false;
 
             internal void AddMessage(string uid)
             {

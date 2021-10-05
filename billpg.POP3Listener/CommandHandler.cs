@@ -30,6 +30,7 @@ namespace billpg.pop3
         private string unauthUserName = null;
         private string userNameAtLogin = null;
         private string authUserID = null;
+        private bool mailboxIsReadOnly = true;
         private IPOP3Mailbox mailbox = null;
         private bool authenticated => authUserID != null;
         private IList<string> uniqueIDs = null;
@@ -201,6 +202,7 @@ namespace billpg.pop3
                 this.unauthUserName = null;
                 this.authUserID = authreq.AuthUserID;
                 this.mailbox = authreq.MailboxProvider;
+                this.mailboxIsReadOnly = authreq.MailboxIsReadOnly;
 
                 /* Fix the collecton of messages IDs for this session. */
                 this.uniqueIDs = RefreshUniqueIDsFromMailbox();
@@ -427,7 +429,7 @@ namespace billpg.pop3
                 return BadCommandSyntaxResponse;
 
             /* If the mailbox is read-only, return error. */
-            if (this.mailbox.MailboxIsReadOnly(this))
+            if (this.mailboxIsReadOnly)
                 return PopResponse.ERR("READ-ONLY", "This mailbox is read-only.");
 
             /* Parse for unique ID. Will also check if message is already flagged. */

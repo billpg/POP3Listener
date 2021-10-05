@@ -64,7 +64,6 @@ namespace Pop3ServiceForm
             }
         }
 
-        bool IPOP3Mailbox.MailboxIsReadOnly(IPOP3ConnectionInfo info) => false;
         static void DoNothing()
         { }
 

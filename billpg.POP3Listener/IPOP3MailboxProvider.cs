@@ -24,6 +24,7 @@ namespace billpg.pop3
 
         public string AuthUserID { get; set; } = null;
         public IPOP3Mailbox MailboxProvider { get; set; } = null;
+        public bool MailboxIsReadOnly { get; set; } = false;
     }
 
     public class POP3MessageRetrievalRequest
@@ -76,7 +77,6 @@ namespace billpg.pop3
 
     public interface IPOP3Mailbox
     {
-        bool MailboxIsReadOnly(IPOP3ConnectionInfo info);
         void MessageDelete(IPOP3ConnectionInfo info, IList<string> uniqueIDs);
     }
 
