@@ -541,7 +541,7 @@ namespace billpg.pop3
                     throw new POP3ResponseException("That message has been deleted.");
 
                 /* Check if message still exists on mailbox. */
-                if (this.mailbox.MessageExists(this, uniqueID) == false)
+                if (this.service.OnMessageExists(this.authUserID, uniqueID) == false)
                     throw new POP3ResponseException("That message has been expunged.");
 
                 /* Otherwise, return to caller. */
@@ -575,7 +575,7 @@ namespace billpg.pop3
                 }
 
                 /* Handle the new-message case. */
-                if (mailbox.MessageExists(this, selectedUniqueID))
+                if (service.OnMessageExists(authUserID, selectedUniqueID))
                 {
                     messageID = 0;
                     uniqueID = selectedUniqueID;

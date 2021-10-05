@@ -53,9 +53,6 @@ namespace billpg.pop3.Tests
         public string UserID(IPOP3ConnectionInfo info)
             => "UnitTestUserID";
 
-        public IList<string> ListMessageUniqueIDs(IPOP3ConnectionInfo info)
-            => uniqueIdsInMailbox.ToList();
-
         public bool MessageExists(IPOP3ConnectionInfo info, string uniqueID)
             => uniqueIdsInMailbox.Contains(uniqueID);
 

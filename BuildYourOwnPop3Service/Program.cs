@@ -21,8 +21,17 @@ namespace BuildYourOwnPop3Service
                 if (req.SuppliedUsername == "me" && req.SuppliedPassword == "me")
                 {
                     /* This User ID is authenticated. */
-                    req.AuthUserID = "me";
+                    req.AuthUserID = "me-as-an-auth-user-ID";
                 }
+            }
+
+            /* Set mailbox list provider. */
+            pop3.OnListMailbox = MyListMailbox;
+            IEnumerable<string> MyListMailbox(string userID)
+            {
+                yield return "a";
+                yield return "b";
+                yield return "c";
             }
 
             /* Start it listening. */

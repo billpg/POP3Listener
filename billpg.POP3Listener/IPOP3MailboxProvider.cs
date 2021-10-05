@@ -13,8 +13,6 @@ namespace billpg.pop3
 
     public interface IPOP3Mailbox
     {
-        IList<string> ListMessageUniqueIDs(IPOP3ConnectionInfo info);
-        bool MessageExists(IPOP3ConnectionInfo info, string uniqueID);
         long MessageSize(IPOP3ConnectionInfo into, string uniqueID);
         IMessageContent MessageContents(IPOP3ConnectionInfo info, string uniqueID);
         bool MailboxIsReadOnly(IPOP3ConnectionInfo info);

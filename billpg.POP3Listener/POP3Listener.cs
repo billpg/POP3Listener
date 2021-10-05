@@ -10,7 +10,7 @@ using System.Net.Sockets;
 
 namespace billpg.pop3
 {
-    public class POP3Listener: IDisposable
+    public class POP3Listener : IDisposable
     {
         private readonly object mutex;
         private readonly List<TcpListener> listeners;
@@ -30,20 +30,23 @@ namespace billpg.pop3
             listeners = new List<TcpListener>();
             connections = new List<SingleConnectionWorker>();
             RequireSecureLogin = true;
+
+            /* Set up the default event handlers. */
+            OnAuthenticate = req => req.AuthUserID = null;
+            OnListMailbox = userID => Enumerable.Empty<string>();
+            OnMessageExists = (userID, messageUID) => this.OnListMailbox(userID).Contains(messageUID);
         }
 
         public string MailboxProviderName { get; set; } = null;
 
         public delegate void OnAuthenticateDelegate(POP3AuthenticationRequest req);
-        public OnAuthenticateDelegate OnAuthenticate { set; get; } = NullAuthenticateRequest;
-        private static void NullAuthenticateRequest(POP3AuthenticationRequest req)
-        {
-            /* Default, ensure the auth user id is null. */
-            req.AuthUserID = null;
-        }
+        public OnAuthenticateDelegate OnAuthenticate { set; get; }
 
         public delegate IEnumerable<string> OnListMailboxDelegate(string userID);
-        public OnListMailboxDelegate OnListMailbox { set; get; } = userID => Enumerable.Empty<string>();
+        public OnListMailboxDelegate OnListMailbox { set; get; } 
+
+        public delegate bool OnMessageExistsDelegate(string userID, string messageUniqueID);
+        public OnMessageExistsDelegate OnMessageExists { get; set; }       
 
         public void ListenOnStandard(IPAddress addr)
         {

@@ -50,6 +50,7 @@ namespace Pop3ServiceForm
             pop3.SecureCertificate = cert;
             pop3.MailboxProviderName = "Pop3ServiceForm";
             pop3.OnAuthenticate = OnAuthenticateHandler;
+            pop3.OnListMailbox = OnListMailboxHandler;
         }
 
         private void AddLogEntry(string entry)
@@ -83,7 +84,7 @@ namespace Pop3ServiceForm
             }
         }
 
-        IList<string> IPOP3Mailbox.ListMessageUniqueIDs(IPOP3ConnectionInfo info)
+        IEnumerable<string> OnListMailboxHandler(string userID)
         {
             IList<string> uniqueIDs = null;
             this.Invoke(new Action(Internal));
@@ -91,13 +92,10 @@ namespace Pop3ServiceForm
 
             void Internal()
             {
-                uniqueIDs = UserByName(info.UserNameAtLogin).Messages.Keys.ToList();
+                uniqueIDs = UserByName(userID).Messages.Keys.ToList();
             }
         }
 
-        bool IPOP3Mailbox.MessageExists(IPOP3ConnectionInfo info, string uniqueID)
-            => ((IPOP3Mailbox)this).ListMessageUniqueIDs(info).Contains(uniqueID);
-        
         bool ShowMessageDeleteForm(string user, IList<string> messages)
         {
             var formResponse = MessageBox.Show(this, $"Delete {string.Join(",", messages)} ?", "Delete", MessageBoxButtons.YesNo);
