@@ -32,6 +32,7 @@ namespace OpenPopTests
                 listener.OnAuthenticate = utprov.OnAuthenticateRequest;
                 listener.OnListMailbox = utprov.OnListMailboxRequest;
                 listener.OnMessageRetrieval = utprov.OnRetrieveRequest;
+                listener.OnMessageDelete = utprov.OnDeleteRequest;
                 listener.ListenOnStandard(IPAddress.Loopback);
 
                 /* Collection of deleted messages. */

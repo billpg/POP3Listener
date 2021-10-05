@@ -31,7 +31,6 @@ namespace billpg.pop3
         private string userNameAtLogin = null;
         private string authUserID = null;
         private bool mailboxIsReadOnly = true;
-        private IPOP3Mailbox mailbox = null;
         private bool authenticated => authUserID != null;
         private IList<string> uniqueIDs = null;
         private readonly List<string> deletedUniqueIDs = new List<string>();
@@ -201,7 +200,6 @@ namespace billpg.pop3
                 this.userNameAtLogin = unauthUserName;
                 this.unauthUserName = null;
                 this.authUserID = authreq.AuthUserID;
-                this.mailbox = authreq.MailboxProvider;
                 this.mailboxIsReadOnly = authreq.MailboxIsReadOnly;
 
                 /* Fix the collecton of messages IDs for this session. */
@@ -216,7 +214,6 @@ namespace billpg.pop3
             {
                 /* Reset attempted user. */
                 this.unauthUserName = null;
-                this.mailbox = null;
 
                 /* Raise the failed attempt count. */
                 this.service.IPBanEngine.RegisterFailedAttempt(clientIP);
@@ -412,7 +409,7 @@ namespace billpg.pop3
             PopResponse Internal(string uniqueID)
             {
                 /* Delete this single message with the mailbox provider. */
-                this.mailbox.MessageDelete(this, new List<string> { uniqueID }.AsReadOnly());
+                this.service.OnMessageDelete(this.authUserID, new List<string> { uniqueID }.AsReadOnly());
 
                 /* Store this id so it will be excluded from future LIST/UIDL/tec. */
                 this.deletedUniqueIDs.Add(uniqueID);
@@ -441,8 +438,8 @@ namespace billpg.pop3
 
         private PopResponse QUIT()
         {
-            /* Handle where the clkient has not logged in. */
-            if (this.mailbox == null)
+            /* Handle where the client has not logged in. */
+            if (this.authenticated == false)
                 return PopResponse.Quit("Closing connection without authenticating.");
 
             /* Delete the flagged messages and reset state. */
@@ -463,7 +460,7 @@ namespace billpg.pop3
             messageCount = deletedUniqueIDs.Count;
 
             /* Send all the flagged unique IDs to the provider. */
-            mailbox.MessageDelete(this, deletedUniqueIDs.AsReadOnly());
+            this.service.OnMessageDelete(this.authUserID, deletedUniqueIDs.AsReadOnly());
 
             /* If we get here, the provider didn't throw an exception. 
              * This means the state has successfuly changed. 

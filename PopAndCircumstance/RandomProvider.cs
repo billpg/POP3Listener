@@ -132,7 +132,6 @@ namespace PopAndCircumstance
             {
                 LogWrite($"***** Successful login by {req.SuppliedUsername} by {req.ConnectionInfo.ClientIP}");
                 req.AuthUserID = req.SuppliedUsername;
-                req.MailboxProvider = user;
                 return;
             }
 
@@ -146,7 +145,7 @@ namespace PopAndCircumstance
             /* Nothing to do. */
         }
 
-        private class ProviderUser : IPOP3Mailbox
+        private class ProviderUser
         {
             internal readonly string UserName;
             internal readonly string PassWord;

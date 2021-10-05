@@ -19,7 +19,7 @@ using System.Windows.Forms;
 
 namespace Pop3ServiceForm
 {
-    public partial class ServiceLauncher : Form, IPOP3Mailbox
+    public partial class ServiceLauncher : Form
     {
         public ServiceLauncher()
         {
@@ -52,6 +52,7 @@ namespace Pop3ServiceForm
             pop3.OnAuthenticate = OnAuthenticateHandler;
             pop3.OnListMailbox = OnListMailboxHandler;
             pop3.OnMessageRetrieval = OnMessageRetrievalHandler;
+            pop3.OnMessageDelete = OnMessageDeleteHandler;
         }
 
         private void AddLogEntry(string entry)
@@ -70,8 +71,6 @@ namespace Pop3ServiceForm
         void OnAuthenticateHandler(POP3AuthenticationRequest req)
         {
             req.AuthUserID = (string)this.Invoke(new Func<string>(Internal));
-            req.MailboxProvider = this;
-
             string Internal()
             {
                 foreach (var userAvail in AllUsers)
@@ -151,12 +150,12 @@ namespace Pop3ServiceForm
         }
 
 
-        void IPOP3Mailbox.MessageDelete(IPOP3ConnectionInfo info, IList<string> uniqueIDs)
+        void OnMessageDeleteHandler(string userID, IList<string> uniqueIDs)
         {
             Invoke(new Action(Internal));
             void Internal()
             {
-                var user = UserByName(info.UserNameAtLogin);
+                var user = UserByName(userID);
                 foreach (var msgToRemove in uniqueIDs)
                     user.Messages.Remove(msgToRemove);
 

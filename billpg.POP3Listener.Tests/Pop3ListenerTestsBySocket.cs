@@ -212,6 +212,7 @@ namespace billpg.pop3.Tests
                 listener.OnAuthenticate = prov.OnAuthenticateRequest;
                 listener.OnListMailbox = prov.OnListMailboxRequest;
                 listener.OnMessageRetrieval = prov.OnRetrieveRequest;
+                listener.OnMessageDelete = prov.OnDeleteRequest;
                 listener.ListenOnHigh(IPAddress.Loopback);
 
                 using (var tcp = new TcpClient())

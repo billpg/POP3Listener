@@ -12,7 +12,7 @@ using System.Text;
 
 namespace billpg.pop3.Tests
 {
-    internal class UnitTestPOP3Provider : IPOP3Mailbox
+    internal class UnitTestPOP3Provider
     {
         public string Name => "UnitTest";
         internal List<string> uniqueIdsInMailbox;
@@ -28,16 +28,10 @@ namespace billpg.pop3.Tests
         public void RegisterNewMessageAction(RaiseNewMessageEvent onNewMessage)
             => this.onNewMessage = onNewMessage;
 
-        public IPOP3Mailbox Authenticate(IPOP3ConnectionInfo info, string user, string pass)
-        {
-            return (user == "me" && pass == "passw0rd") ? this : null;
-        }
-
         internal void OnAuthenticateRequest(POP3AuthenticationRequest req)
         {
             if (req.SuppliedUsername == "me" && req.SuppliedPassword == "passw0rd")
                 req.AuthUserID = "me-as-user-id";
-            req.MailboxProvider = this;
         }
 
         internal IEnumerable<string> OnListMailboxRequest(string userID)
@@ -75,7 +69,7 @@ namespace billpg.pop3.Tests
         }
 
 
-        public void MessageDelete(IPOP3ConnectionInfo info, IList<string> uniqueIDs)
+        public void OnDeleteRequest(string userID, IList<string> uniqueIDs)
         {
             foreach (string uidToDelete in uniqueIDs)
                 uniqueIdsInMailbox.Remove(uidToDelete);

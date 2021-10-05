@@ -23,7 +23,6 @@ namespace billpg.pop3
         }
 
         public string AuthUserID { get; set; } = null;
-        public IPOP3Mailbox MailboxProvider { get; set; } = null;
         public bool MailboxIsReadOnly { get; set; } = false;
     }
 
@@ -74,11 +73,6 @@ namespace billpg.pop3
     }
 
     public delegate void RaiseNewMessageEvent(string userID);
-
-    public interface IPOP3Mailbox
-    {
-        void MessageDelete(IPOP3ConnectionInfo info, IList<string> uniqueIDs);
-    }
 
     public interface IPOP3EventNotification
     {
