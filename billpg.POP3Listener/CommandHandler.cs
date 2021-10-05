@@ -280,7 +280,7 @@ namespace billpg.pop3
             var countedUniqueIDs = this.uniqueIDs.Except(this.deletedUniqueIDs).ToList();
 
             /* Loop through, loading the message size for each one. */
-            long totalBytes = countedUniqueIDs.Select(uniqueID => mailbox.MessageSize(this, uniqueID)).Sum();
+            long totalBytes = countedUniqueIDs.Select(uniqueID => this.service.OnMessageSize(this.authUserID, uniqueID)).Sum();
 
             /* Return response. */
             return PopResponse.OKSingle($"{countedUniqueIDs.Count} {totalBytes}");
@@ -290,7 +290,7 @@ namespace billpg.pop3
         {
             return PerMessageOrSingle(id, Translate, "Message sizes follow...");
             string Translate(int messageID, string uniqueID)
-                => $"{messageID} {mailbox.MessageSize(this, uniqueID)}";
+                => $"{messageID} {service.OnMessageSize(this.authUserID, uniqueID)}";
         }
 
         private PopResponse UIDL(string id)
@@ -378,15 +378,16 @@ namespace billpg.pop3
             ParseForUniqueId(pars, out _, out string uniqueID);
 
             /* Load the message from the provider. */
-            var msg = mailbox.MessageContents(this, uniqueID);
+            POP3MessageRetrievalRequest request = new POP3MessageRetrievalRequest(authUserID, uniqueID, lineCountSend);
+            this.service.OnMessageRetrieval(request);
 
             /* If RETR, return the whole message without a wrapper. */
             if (lineCountSend < 0)
-                return PopResponse.OKMulti("Message text follows...", ContentWrappers.WrapForRetr(msg));
+                return PopResponse.OKMulti("Message text follows...", ContentWrappers.WrapForRetr(request));
 
             /* If TOP (include header but stop early. */
             else
-                return PopResponse.OKMulti($"Header and first {lineCountSend} lines...", ContentWrappers.WrapForTop(msg, lineCountSend));
+                return PopResponse.OKMulti($"Header and first {lineCountSend} lines...", ContentWrappers.WrapForTop(request, lineCountSend));
 
             /* Invalid combination. */
             throw new ApplicationException("Called RetrTopResu with a bad combination of line counts.");

@@ -31,6 +31,7 @@ namespace OpenPopTests
                 var utprov = new UnitTestPOP3Provider();
                 listener.OnAuthenticate = utprov.OnAuthenticateRequest;
                 listener.OnListMailbox = utprov.OnListMailboxRequest;
+                listener.OnMessageRetrieval = utprov.OnRetrieveRequest;
                 listener.ListenOnStandard(IPAddress.Loopback);
 
                 /* Collection of deleted messages. */

@@ -34,6 +34,20 @@ namespace BuildYourOwnPop3Service
                 yield return "c";
             }
 
+            /* Set message retrival. */
+            pop3.OnMessageRetrieval = MyRetrieve;
+            void MyRetrieve(POP3MessageRetrievalRequest req)
+            {
+                req.UseLines(new List<string> 
+                {
+                    "Subject: With Love",
+                    "From: me@example.com",
+                    "To: you@example.com",
+                    "",
+                    "Da da dah, da da dum dum dah."
+                });
+            }
+
             /* Start it listening. */
             pop3.ListenOn(IPAddress.Loopback, 110, false);
 

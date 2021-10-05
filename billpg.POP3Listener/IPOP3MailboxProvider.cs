@@ -9,12 +9,73 @@ using System.Text;
 
 namespace billpg.pop3
 {
+    public class POP3AuthenticationRequest
+    {
+        public IPOP3ConnectionInfo ConnectionInfo { get; }
+        public string SuppliedUsername { get; }
+        public string SuppliedPassword { get; }
+
+        internal POP3AuthenticationRequest(IPOP3ConnectionInfo info, string suppliedUsername, string suppliedPassword)
+        {
+            this.ConnectionInfo = info;
+            this.SuppliedUsername = suppliedUsername;
+            this.SuppliedPassword = suppliedPassword;
+        }
+
+        public string AuthUserID { get; set; } = null;
+        public IPOP3Mailbox MailboxProvider { get; set; } = null;
+    }
+
+    public class POP3MessageRetrievalRequest
+    {
+        public string AuthUserID { get; }
+        public string MessageUniqueID { get; }
+        public int TopLineCount { get; }
+        public bool FullMessage => TopLineCount < 0;
+        public Func<string> OnNextLine { get; set; }
+        public Action OnClose { get; set; }
+        public bool AcceptRetrieval { get; set; }
+
+        internal POP3MessageRetrievalRequest(string authUserID, string messageUniqueID, int topLineCount)
+        {
+            this.AuthUserID = authUserID;
+            this.MessageUniqueID = messageUniqueID;
+            this.TopLineCount = topLineCount;
+            this.OnNextLine = () => throw new POP3ResponseException("OnNextLine event handler has not been set.");
+            this.OnClose = DefaultOnClose;
+            this.AcceptRetrieval = false;
+        }
+        
+        private void DefaultOnClose()
+        {
+            /* Nothing to do. */
+        }
+
+        public void RejectRequest()
+        {
+            this.AcceptRetrieval = false;
+        }
+
+        public void UseLines(IEnumerable<string> lines)
+        {
+            /* Start the enumerable and set an OnNextLine and OnClose to read that enumerator. */
+            var lineEnum = lines.GetEnumerator();
+            string OnNextLineInternal() => lineEnum.MoveNext() ? lineEnum.Current : null;
+            this.OnNextLine = OnNextLineInternal;
+            this.OnClose = lineEnum.Dispose;
+
+            /* Flag this as acceptable. */
+            this.AcceptRetrieval = true;
+        }
+
+        public void UseTextFile(string path)
+            => UseLines(System.IO.File.ReadLines(path));
+    }
+
     public delegate void RaiseNewMessageEvent(string userID);
 
     public interface IPOP3Mailbox
     {
-        long MessageSize(IPOP3ConnectionInfo into, string uniqueID);
-        IMessageContent MessageContents(IPOP3ConnectionInfo info, string uniqueID);
         bool MailboxIsReadOnly(IPOP3ConnectionInfo info);
         void MessageDelete(IPOP3ConnectionInfo info, IList<string> uniqueIDs);
     }

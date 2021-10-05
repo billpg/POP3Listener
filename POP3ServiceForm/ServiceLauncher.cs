@@ -51,6 +51,7 @@ namespace Pop3ServiceForm
             pop3.MailboxProviderName = "Pop3ServiceForm";
             pop3.OnAuthenticate = OnAuthenticateHandler;
             pop3.OnListMailbox = OnListMailboxHandler;
+            pop3.OnMessageRetrieval = OnMessageRetrievalHandler;
         }
 
         private void AddLogEntry(string entry)
@@ -113,26 +114,17 @@ namespace Pop3ServiceForm
                 return false;
         }
 
-        long IPOP3Mailbox.MessageSize(IPOP3ConnectionInfo into, string uniqueID)
-        {
-            return (long)Invoke(new Func<long>(Internal));
-            long Internal()
-            {
-                return UserByName(into.UserNameAtLogin).Messages[uniqueID].AsRfc822.Length;
-            }
-        }
-
         private UserRecord UserByName(string user) => AllUsers.Where(u => u.User == user).Single();
 
 
-        IMessageContent IPOP3Mailbox.MessageContents(IPOP3ConnectionInfo info, string uniqueID)
+        private void OnMessageRetrievalHandler(POP3MessageRetrievalRequest request)
         {
-            return (IMessageContent)Invoke(new Func<IMessageContent>(Internal));
-            IMessageContent Internal()
+            Invoke(new Action(Internal));
+            void Internal()
             {
-                string rfc = UserByName(info.UserNameAtLogin).Messages[uniqueID].AsRfc822;
+                string rfc = UserByName(request.AuthUserID).Messages[request.MessageUniqueID].AsRfc822;
                 var lines = rfc.Split('\r').Select(line => line.Trim()).ToList();
-                return new WrapList(lines);
+                request.UseLines(lines);
             }
         }
 

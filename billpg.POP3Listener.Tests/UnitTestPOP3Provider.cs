@@ -56,28 +56,9 @@ namespace billpg.pop3.Tests
         public bool MessageExists(IPOP3ConnectionInfo info, string uniqueID)
             => uniqueIdsInMailbox.Contains(uniqueID);
 
-        public long MessageSize(IPOP3ConnectionInfo info, string uniqueID)
+        public void OnRetrieveRequest(POP3MessageRetrievalRequest request)
         {
-            /* If asking about a deleted message, return zero. */
-            if (this.uniqueIdsInMailbox.Contains(uniqueID) == false)
-                return 0;
-
-            var msg = MessageContents(info, uniqueID);
-            long total = 0;
-            while (true)
-            {
-                string line = msg.NextLine();
-                if (line == null)
-                    return total;
-                else
-                    total += line.Length + 2;
-            }
-        }
-            
-
-        public IMessageContent MessageContents(IPOP3ConnectionInfo info, string uniqueID)
-        {
-            Microsoft.VisualStudio.TestTools.UnitTesting.CollectionAssert.Contains(this.uniqueIdsInMailbox, uniqueID);
+            Microsoft.VisualStudio.TestTools.UnitTesting.CollectionAssert.Contains(this.uniqueIdsInMailbox, request.MessageUniqueID);
 
             var msg = new List<string> 
             {
@@ -85,14 +66,14 @@ namespace billpg.pop3.Tests
                 "From: me@example.com",
                 "To: you@example.com",
                 "",
-                $"Unique id: {uniqueID}",
+                $"Unique id: {request.MessageUniqueID}",
                 "",
                 ". One dot.",
                 ".. Two dots.",
                 "... Three dots."               
             };
 
-            return new WrapList(msg);
+            request.UseLines(msg);
         }
 
 

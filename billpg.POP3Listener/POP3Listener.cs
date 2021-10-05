@@ -35,6 +35,8 @@ namespace billpg.pop3
             OnAuthenticate = req => req.AuthUserID = null;
             OnListMailbox = userID => Enumerable.Empty<string>();
             OnMessageExists = (userID, messageUID) => this.OnListMailbox(userID).Contains(messageUID);
+            OnMessageSize = (userID, messageUID) => ContentWrappers.MessageSizeByRetrieval(this.OnMessageRetrieval, userID, messageUID);
+            OnMessageRetrieval = req => throw new POP3ResponseException("OnMessageRetrieval handler not set.");
         }
 
         public string MailboxProviderName { get; set; } = null;
@@ -47,6 +49,12 @@ namespace billpg.pop3
 
         public delegate bool OnMessageExistsDelegate(string userID, string messageUniqueID);
         public OnMessageExistsDelegate OnMessageExists { get; set; }       
+
+        public delegate long OnMessageSizeDelegate(string userID, string messageUniqueID);
+        public OnMessageSizeDelegate OnMessageSize { get; set; }
+
+        public delegate void OnMessageRetrievalDelegate(POP3MessageRetrievalRequest req);
+        public OnMessageRetrievalDelegate OnMessageRetrieval { get; set; }
 
         public void ListenOnStandard(IPAddress addr)
         {

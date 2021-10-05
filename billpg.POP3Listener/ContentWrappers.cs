@@ -11,12 +11,44 @@ namespace billpg.pop3
     internal static class ContentWrappers
     {
         /// <summary>
+        /// Handy UTF8 NO-BOM constructed once.
+        /// </summary>
+        private static UTF8Encoding UTF8_NO_BOM = new UTF8Encoding(false);
+
+        /// <summary>
+        /// Helper function that finds a message's size by retrieving the whole message and counting bytes.
+        /// </summary>
+        /// <param name="onRetrieveHandler">Currenrt message retrieval handler to invoke.</param>
+        /// <param name="userID">User's ID.</param>
+        /// <param name="messageUniqueID">Message unique ID.</param>
+        /// <returns>Total message byte count.</returns>
+        internal static long MessageSizeByRetrieval(POP3Listener.OnMessageRetrievalDelegate onRetrieveHandler, string userID, string messageUniqueID)
+        {
+            /* Construct a full-message retrival request and pass to current handler for it to confiure. */
+            POP3MessageRetrievalRequest request = new POP3MessageRetrievalRequest(userID, messageUniqueID, -1);
+            onRetrieveHandler(request);
+
+            /* Loop through lines, counting bytes as we go. */
+            long byteCountSoFar = 0;
+            while (true)
+            {
+                /* Load line. If end-of-message, return completed byte count. */
+                string line = request.OnNextLine();
+                if (line == null)
+                    return byteCountSoFar;
+
+                /* Update the count, adding two for CRLF. */
+                byteCountSoFar += UTF8_NO_BOM.GetByteCount(line) + 2;
+            }
+        }
+
+        /// <summary>
         /// Wrap a message content interface with a NextLineFn function suiatbe for a TOP command.
         /// </summary>
         /// <param name="msg">Provider's message content object.</param>
         /// <param name="lineCount">Numbe rof lines after the ehader.</param>
         /// <returns>Wrapper function.</returns>
-        internal static NextLineFn WrapForTop(IMessageContent msg, long lineCount)
+        internal static NextLineFn WrapForTop(POP3MessageRetrievalRequest request, long lineCount)
         {
             /* Update counter, because the blank line doesn't count. */
             lineCount += 1;
@@ -33,7 +65,7 @@ namespace billpg.pop3
                     return;
 
                 /* Inform the message content object. */
-                msg.Close();
+                request.OnClose();
 
                 /* Raise the flag. */
                 calledClose = true;
@@ -54,7 +86,7 @@ namespace billpg.pop3
                 }
 
                 /* Load a line. Test for end-of-message. */
-                string line = msg.NextLine();
+                string line = request.OnNextLine();
                 if (line == null)
                 {
                     /* Close the message content stream and return null. */
@@ -80,7 +112,7 @@ namespace billpg.pop3
         /// </summary>
         /// <param name="msg">Provider's messge content object.</param>
         /// <returns>Wrapped function instance.</returns>
-        internal static NextLineFn WrapForRetr(IMessageContent msg)
+        internal static NextLineFn WrapForRetr(POP3MessageRetrievalRequest request)
         {
             /* Setup a flag to be raised when the message content has completed. */
             bool endOfMessage = false;
@@ -94,13 +126,13 @@ namespace billpg.pop3
                     return null;
 
                 /* Read the next line from the supplied object. */
-                string line = msg.NextLine();
+                string line = request.OnNextLine();
 
                 /* End of message? */
                 if (line == null)
                 {
                     /* Close the wrapped resource, raise flag and stop. */
-                    msg.Close();
+                    request.OnClose();
                     endOfMessage = true;
                     return null;                    
                 }
