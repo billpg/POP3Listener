@@ -31,19 +31,19 @@ namespace billpg.pop3.Tests
         internal void OnAuthenticateRequest(POP3AuthenticationRequest req)
         {
             if (req.SuppliedUsername == "me" && req.SuppliedPassword == "passw0rd")
-                req.AuthUserID = "me-as-user-id";
+                req.AuthMailboxID = "me-as-user-id";
         }
 
-        internal IEnumerable<string> OnListMailboxRequest(string userID)
+        internal IEnumerable<string> OnListMailboxRequest(string mailboxID)
         {
-            if (userID == "me-as-user-id")
+            if (mailboxID == "me-as-user-id")
                 return uniqueIdsInMailbox.ToList();
             else
                 return Enumerable.Empty<string>();
         }
 
-        public string UserID(IPOP3ConnectionInfo info)
-            => "UnitTestUserID";
+        public string MailboxID(IPOP3ConnectionInfo info)
+            => "UnitTestMailboxID";
 
         public bool MessageExists(IPOP3ConnectionInfo info, string uniqueID)
             => uniqueIdsInMailbox.Contains(uniqueID);
@@ -69,7 +69,7 @@ namespace billpg.pop3.Tests
         }
 
 
-        public void OnDeleteRequest(string userID, IList<string> uniqueIDs)
+        public void OnDeleteRequest(string mailboxID, IList<string> uniqueIDs)
         {
             foreach (string uidToDelete in uniqueIDs)
                 uniqueIdsInMailbox.Remove(uidToDelete);

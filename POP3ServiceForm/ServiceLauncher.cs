@@ -70,7 +70,7 @@ namespace Pop3ServiceForm
 
         void OnAuthenticateHandler(POP3AuthenticationRequest req)
         {
-            req.AuthUserID = (string)this.Invoke(new Func<string>(Internal));
+            req.AuthMailboxID = (string)this.Invoke(new Func<string>(Internal));
             string Internal()
             {
                 foreach (var userAvail in AllUsers)
@@ -83,7 +83,7 @@ namespace Pop3ServiceForm
             }
         }
 
-        IEnumerable<string> OnListMailboxHandler(string userID)
+        IEnumerable<string> OnListMailboxHandler(string mailboxID)
         {
             IList<string> uniqueIDs = null;
             this.Invoke(new Action(Internal));
@@ -91,7 +91,7 @@ namespace Pop3ServiceForm
 
             void Internal()
             {
-                uniqueIDs = UserByName(userID).Messages.Keys.ToList();
+                uniqueIDs = UserByName(mailboxID).Messages.Keys.ToList();
             }
         }
 
@@ -120,7 +120,7 @@ namespace Pop3ServiceForm
             Invoke(new Action(Internal));
             void Internal()
             {
-                string rfc = UserByName(request.AuthUserID).Messages[request.MessageUniqueID].AsRfc822;
+                string rfc = UserByName(request.AuthMailboxID).Messages[request.MessageUniqueID].AsRfc822;
                 var lines = rfc.Split('\r').Select(line => line.Trim()).ToList();
                 request.UseLines(lines);
             }
@@ -150,12 +150,12 @@ namespace Pop3ServiceForm
         }
 
 
-        void OnMessageDeleteHandler(string userID, IList<string> uniqueIDs)
+        void OnMessageDeleteHandler(string mailboxID, IList<string> uniqueIDs)
         {
             Invoke(new Action(Internal));
             void Internal()
             {
-                var user = UserByName(userID);
+                var user = UserByName(mailboxID);
                 foreach (var msgToRemove in uniqueIDs)
                     user.Messages.Remove(msgToRemove);
 

@@ -19,13 +19,13 @@ namespace billpg.pop3
         /// Helper function that finds a message's size by retrieving the whole message and counting bytes.
         /// </summary>
         /// <param name="onRetrieveHandler">Currenrt message retrieval handler to invoke.</param>
-        /// <param name="userID">User's ID.</param>
+        /// <param name="mailboxID">User's ID.</param>
         /// <param name="messageUniqueID">Message unique ID.</param>
         /// <returns>Total message byte count.</returns>
-        internal static long MessageSizeByRetrieval(POP3Events.OnMessageRetrievalDelegate onRetrieveHandler, string userID, string messageUniqueID)
+        internal static long MessageSizeByRetrieval(POP3Events.OnMessageRetrievalDelegate onRetrieveHandler, string mailboxID, string messageUniqueID)
         {
             /* Construct a full-message retrival request and pass to current handler for it to confiure. */
-            POP3MessageRetrievalRequest request = new POP3MessageRetrievalRequest(userID, messageUniqueID, -1);
+            POP3MessageRetrievalRequest request = new POP3MessageRetrievalRequest(mailboxID, messageUniqueID, -1);
             onRetrieveHandler(request);
 
             /* Loop through lines, counting bytes as we go. */

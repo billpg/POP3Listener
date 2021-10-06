@@ -21,13 +21,13 @@ namespace BuildYourOwnPop3Service
                 if (req.SuppliedUsername == "me" && req.SuppliedPassword == "me")
                 {
                     /* This User ID is authenticated. */
-                    req.AuthUserID = "me-as-an-auth-user-ID";
+                    req.AuthMailboxID = "me-as-an-auth-user-ID";
                 }
             }
 
             /* Set mailbox list provider. */
             pop3.Events.OnListMailbox = MyListMailbox;
-            IEnumerable<string> MyListMailbox(string userID)
+            IEnumerable<string> MyListMailbox(string mailboxID)
             {
                 yield return "a";
                 yield return "b";
@@ -83,7 +83,7 @@ namespace BuildYourOwnPop3Service
 
     class MyMailbox : IPOP3Mailbox
     {
-        public string UserID(IPOP3ConnectionInfo info)
+        public string MailboxID(IPOP3ConnectionInfo info)
     => "Mr Rutabaga";
 
         const string FOLDER = @"C:\MyMailbox\";

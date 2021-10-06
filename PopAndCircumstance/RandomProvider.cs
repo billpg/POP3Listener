@@ -123,7 +123,7 @@ namespace PopAndCircumstance
             if (user == null)
             {
                 LogWrite($"***** No such user {req.SuppliedUsername} for login attempt by {req.ConnectionInfo.ClientIP}");
-                req.AuthUserID = null;
+                req.AuthMailboxID = null;
                 return;
             }
 
@@ -131,13 +131,13 @@ namespace PopAndCircumstance
             if (user.PassWord == req.SuppliedPassword)
             {
                 LogWrite($"***** Successful login by {req.SuppliedUsername} by {req.ConnectionInfo.ClientIP}");
-                req.AuthUserID = req.SuppliedUsername;
+                req.AuthMailboxID = req.SuppliedUsername;
                 return;
             }
 
             /* Wrong password. */
             LogWrite($"***** Wrong password attempt for {req.SuppliedUsername} by {req.ConnectionInfo.ClientIP}");
-            req.AuthUserID = null;
+            req.AuthMailboxID = null;
         }
 
         public void RegisterNewMessageAction(RaiseNewMessageEvent onNewMessage)
@@ -166,7 +166,7 @@ namespace PopAndCircumstance
                 messages.Add(new RandomMessage(UserName, uid));
             }
 
-            public string UserID(IPOP3ConnectionInfo info) => UserName;
+            public string MailboxID(IPOP3ConnectionInfo info) => UserName;
 
             public IList<string> ListMessageUniqueIDs(IPOP3ConnectionInfo info)
                 => UniqueIDs.ToList().AsReadOnly();

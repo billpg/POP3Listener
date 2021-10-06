@@ -22,13 +22,13 @@ namespace billpg.pop3
             this.SuppliedPassword = suppliedPassword;
         }
 
-        public string AuthUserID { get; set; } = null;
+        public string AuthMailboxID { get; set; } = null;
         public bool MailboxIsReadOnly { get; set; } = false;
     }
 
     public class POP3MessageRetrievalRequest
     {
-        public string AuthUserID { get; }
+        public string AuthMailboxID { get; }
         public string MessageUniqueID { get; }
         public int TopLineCount { get; }
         public bool FullMessage => TopLineCount < 0;
@@ -36,9 +36,9 @@ namespace billpg.pop3
         public Action OnClose { get; set; }
         public bool AcceptRetrieval { get; set; }
 
-        internal POP3MessageRetrievalRequest(string authUserID, string messageUniqueID, int topLineCount)
+        internal POP3MessageRetrievalRequest(string authMailboxID, string messageUniqueID, int topLineCount)
         {
-            this.AuthUserID = authUserID;
+            this.AuthMailboxID = authMailboxID;
             this.MessageUniqueID = messageUniqueID;
             this.TopLineCount = topLineCount;
             this.OnNextLine = () => throw new POP3ResponseException("OnNextLine event handler has not been set.");
@@ -72,7 +72,7 @@ namespace billpg.pop3
             => UseLines(System.IO.File.ReadLines(path));
     }
 
-    public delegate void RaiseNewMessageEvent(string userID);
+    public delegate void RaiseNewMessageEvent(string mailboxID);
 
     public interface IPOP3EventNotification
     {
@@ -127,7 +127,7 @@ namespace billpg.pop3
     {
         System.Net.IPAddress ClientIP { get; }
         long ConnectionID { get; }
-        string AuthUserID { get; }
+        string AuthMailboxID { get; }
         string UserNameAtLogin { get; }
         bool IsSecure { get; }
         object ProviderTag { get; set; }
