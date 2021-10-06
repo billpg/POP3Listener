@@ -50,7 +50,7 @@ namespace Pop3ServiceForm
             pop3.SecureCertificate = cert;
             pop3.MailboxProviderName = "Pop3ServiceForm";
             pop3.Events.OnAuthenticate = OnAuthenticateHandler;
-            pop3.Events.OnListMailbox = OnListMailboxHandler;
+            pop3.Events.OnMessageList = OnMessageListHandler;
             pop3.Events.OnMessageRetrieval = OnMessageRetrievalHandler;
             pop3.Events.OnMessageDelete = OnMessageDeleteHandler;
         }
@@ -83,7 +83,7 @@ namespace Pop3ServiceForm
             }
         }
 
-        IEnumerable<string> OnListMailboxHandler(string mailboxID)
+        IEnumerable<string> OnMessageListHandler(string mailboxID)
         {
             IList<string> uniqueIDs = null;
             this.Invoke(new Action(Internal));

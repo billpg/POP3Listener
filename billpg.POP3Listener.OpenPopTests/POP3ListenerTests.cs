@@ -30,7 +30,7 @@ namespace OpenPopTests
             {
                 var utprov = new UnitTestPOP3Provider();
                 listener.Events.OnAuthenticate = utprov.OnAuthenticateRequest;
-                listener.Events.OnListMailbox = utprov.OnListMailboxRequest;
+                listener.Events.OnMessageList = utprov.OnMessageListRequest;
                 listener.Events.OnMessageRetrieval = utprov.OnRetrieveRequest;
                 listener.Events.OnMessageDelete = utprov.OnDeleteRequest;
                 listener.ListenOnStandard(IPAddress.Loopback);
@@ -122,7 +122,7 @@ namespace OpenPopTests
             {
                 var utprov = new UnitTestPOP3Provider();
                 listener.Events.OnAuthenticate = utprov.OnAuthenticateRequest;
-                listener.Events.OnListMailbox = utprov.OnListMailboxRequest;
+                listener.Events.OnMessageList = utprov.OnMessageListRequest;
                 listener.ListenOnStandard(IPAddress.Loopback);
                 listener.SecureCertificate = UnitTestPOP3Provider.selfSigned;
 

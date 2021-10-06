@@ -12,8 +12,8 @@ namespace billpg.pop3
         public delegate void OnAuthenticateDelegate(POP3AuthenticationRequest req);
         public OnAuthenticateDelegate OnAuthenticate { set; get; }
 
-        public delegate IEnumerable<string> OnListMailboxDelegate(string mailboxID);
-        public OnListMailboxDelegate OnListMailbox { set; get; }
+        public delegate IEnumerable<string> OnMessageListDelegate(string mailboxID);
+        public OnMessageListDelegate OnMessageList { set; get; }
 
         public delegate bool OnMessageExistsDelegate(string mailboxID, string messageUniqueID);
         public OnMessageExistsDelegate OnMessageExists { get; set; }
@@ -31,8 +31,8 @@ namespace billpg.pop3
         {
             /* Set up the default event handlers. */
             OnAuthenticate = req => req.AuthMailboxID = null;
-            OnListMailbox = mailboxID => Enumerable.Empty<string>();
-            OnMessageExists = (mailboxID, messageUID) => this.OnListMailbox(mailboxID).Contains(messageUID);
+            OnMessageList = mailboxID => Enumerable.Empty<string>();
+            OnMessageExists = (mailboxID, messageUID) => this.OnMessageList(mailboxID).Contains(messageUID);
             OnMessageSize = (mailboxID, messageUID) => ContentWrappers.MessageSizeByRetrieval(this.OnMessageRetrieval, mailboxID, messageUID);
             OnMessageRetrieval = req => throw new POP3ResponseException("OnMessageRetrieval handler not set.");
             OnMessageDelete = (mailboxID, messageUID) => throw new POP3ResponseException("OnMessageDelete handler not set.");

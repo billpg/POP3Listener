@@ -34,7 +34,7 @@ namespace billpg.pop3.Tests
                 req.AuthMailboxID = "me-as-user-id";
         }
 
-        internal IEnumerable<string> OnListMailboxRequest(string mailboxID)
+        internal IEnumerable<string> OnMessageListRequest(string mailboxID)
         {
             if (mailboxID == "me-as-user-id")
                 return uniqueIdsInMailbox.ToList();

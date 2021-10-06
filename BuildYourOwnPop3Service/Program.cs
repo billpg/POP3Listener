@@ -26,7 +26,7 @@ namespace BuildYourOwnPop3Service
             }
 
             /* Set mailbox list provider. */
-            pop3.Events.OnListMailbox = MyListMailbox;
+            pop3.Events.OnMessageList = MyListMailbox;
             IEnumerable<string> MyListMailbox(string mailboxID)
             {
                 yield return "a";

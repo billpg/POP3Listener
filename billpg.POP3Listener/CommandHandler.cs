@@ -226,7 +226,7 @@ namespace billpg.pop3
         private IList<string> RefreshUniqueIDsFromMailbox()
         {
             /* Load the new list of IDs from the mailbox interface object. */
-            var newUniqueIDs = this.service.Events.OnListMailbox(this.authMailboxID).ToList().AsReadOnly();
+            var newUniqueIDs = this.service.Events.OnMessageList(this.authMailboxID).ToList().AsReadOnly();
 
             /* If any are outside 33-126, return with a critical error. Otherwise, return them. */
             if (newUniqueIDs.All(IsGoodUniqueID))
