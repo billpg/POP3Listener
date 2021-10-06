@@ -90,7 +90,7 @@ namespace billpg.pop3.Tests
         {
             using (POP3Listener listener = new POP3Listener())
             {
-                listener.OnAuthenticate = new UnitTestPOP3Provider().OnAuthenticateRequest;
+                listener.Events.OnAuthenticate = new UnitTestPOP3Provider().OnAuthenticateRequest;
                 listener.ListenOnHigh(IPAddress.Loopback);
                 listener.SecureCertificate = UnitTestPOP3Provider.selfSigned;
 
@@ -124,7 +124,7 @@ namespace billpg.pop3.Tests
         {
             using (POP3Listener listener = new POP3Listener())
             {
-                listener.OnAuthenticate = new UnitTestPOP3Provider().OnAuthenticateRequest;
+                listener.Events.OnAuthenticate = new UnitTestPOP3Provider().OnAuthenticateRequest;
                 listener.ListenOnHigh(IPAddress.Loopback);
                 listener.SecureCertificate = UnitTestPOP3Provider.selfSigned;
 
@@ -162,7 +162,7 @@ namespace billpg.pop3.Tests
         {
             using (POP3Listener listener = new POP3Listener())
             {
-                listener.OnAuthenticate = new UnitTestPOP3Provider().OnAuthenticateRequest;
+                listener.Events.OnAuthenticate = new UnitTestPOP3Provider().OnAuthenticateRequest;
                 listener.ListenOnHigh(IPAddress.Loopback);
                 listener.SecureCertificate = UnitTestPOP3Provider.selfSigned;
 
@@ -209,10 +209,10 @@ namespace billpg.pop3.Tests
             using (POP3Listener listener = new POP3Listener())
             {
                 var prov = new UnitTestPOP3Provider();
-                listener.OnAuthenticate = prov.OnAuthenticateRequest;
-                listener.OnListMailbox = prov.OnListMailboxRequest;
-                listener.OnMessageRetrieval = prov.OnRetrieveRequest;
-                listener.OnMessageDelete = prov.OnDeleteRequest;
+                listener.Events.OnAuthenticate = prov.OnAuthenticateRequest;
+                listener.Events.OnListMailbox = prov.OnListMailboxRequest;
+                listener.Events.OnMessageRetrieval = prov.OnRetrieveRequest;
+                listener.Events.OnMessageDelete = prov.OnDeleteRequest;
                 listener.ListenOnHigh(IPAddress.Loopback);
 
                 using (var tcp = new TcpClient())
@@ -645,8 +645,8 @@ namespace billpg.pop3.Tests
                 {
                     var prov = new UnitTestPOP3Provider();
                     prov.uniqueIdsInMailbox = new List<string> { badUniqueID };
-                    listener.OnAuthenticate = prov.OnAuthenticateRequest;
-                    listener.OnListMailbox = prov.OnListMailboxRequest;
+                    listener.Events.OnAuthenticate = prov.OnAuthenticateRequest;
+                    listener.Events.OnListMailbox = prov.OnListMailboxRequest;
                     listener.ListenOnHigh(IPAddress.Loopback);
 
                     using (var tcp = new TcpClient())

@@ -22,7 +22,7 @@ namespace billpg.pop3
         /// <param name="userID">User's ID.</param>
         /// <param name="messageUniqueID">Message unique ID.</param>
         /// <returns>Total message byte count.</returns>
-        internal static long MessageSizeByRetrieval(POP3Listener.OnMessageRetrievalDelegate onRetrieveHandler, string userID, string messageUniqueID)
+        internal static long MessageSizeByRetrieval(POP3Events.OnMessageRetrievalDelegate onRetrieveHandler, string userID, string messageUniqueID)
         {
             /* Construct a full-message retrival request and pass to current handler for it to confiure. */
             POP3MessageRetrievalRequest request = new POP3MessageRetrievalRequest(userID, messageUniqueID, -1);

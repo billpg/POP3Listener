@@ -15,7 +15,7 @@ namespace BuildYourOwnPop3Service
             var pop3 = new POP3Listener();
 
             /* Set authentication provider. */
-            pop3.OnAuthenticate = MyAuth;
+            pop3.Events.OnAuthenticate = MyAuth;
             void MyAuth(POP3AuthenticationRequest req)
             {
                 if (req.SuppliedUsername == "me" && req.SuppliedPassword == "me")
@@ -26,7 +26,7 @@ namespace BuildYourOwnPop3Service
             }
 
             /* Set mailbox list provider. */
-            pop3.OnListMailbox = MyListMailbox;
+            pop3.Events.OnListMailbox = MyListMailbox;
             IEnumerable<string> MyListMailbox(string userID)
             {
                 yield return "a";
@@ -35,7 +35,7 @@ namespace BuildYourOwnPop3Service
             }
 
             /* Set message retrival. */
-            pop3.OnMessageRetrieval = MyRetrieve;
+            pop3.Events.OnMessageRetrieval = MyRetrieve;
             void MyRetrieve(POP3MessageRetrievalRequest req)
             {
                 req.UseLines(new List<string> 

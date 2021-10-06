@@ -22,6 +22,7 @@ namespace billpg.pop3
         internal readonly System.Threading.ManualResetEvent stopService;
         private static long nextConnectionID = 5000000001;
         internal static long GenConnectionID() => System.Threading.Interlocked.Increment(ref nextConnectionID);
+        public POP3Events Events { get; } = new POP3Events();
 
         public POP3Listener()
         {
@@ -30,35 +31,9 @@ namespace billpg.pop3
             listeners = new List<TcpListener>();
             connections = new List<SingleConnectionWorker>();
             RequireSecureLogin = true;
-
-            /* Set up the default event handlers. */
-            OnAuthenticate = req => req.AuthUserID = null;
-            OnListMailbox = userID => Enumerable.Empty<string>();
-            OnMessageExists = (userID, messageUID) => this.OnListMailbox(userID).Contains(messageUID);
-            OnMessageSize = (userID, messageUID) => ContentWrappers.MessageSizeByRetrieval(this.OnMessageRetrieval, userID, messageUID);
-            OnMessageRetrieval = req => throw new POP3ResponseException("OnMessageRetrieval handler not set.");
-            OnMessageDelete = (userID, messageUID) => throw new POP3ResponseException("OnMessageDelete handler not set.");
         }
 
         public string MailboxProviderName { get; set; } = null;
-
-        public delegate void OnAuthenticateDelegate(POP3AuthenticationRequest req);
-        public OnAuthenticateDelegate OnAuthenticate { set; get; }
-
-        public delegate IEnumerable<string> OnListMailboxDelegate(string userID);
-        public OnListMailboxDelegate OnListMailbox { set; get; } 
-
-        public delegate bool OnMessageExistsDelegate(string userID, string messageUniqueID);
-        public OnMessageExistsDelegate OnMessageExists { get; set; }       
-
-        public delegate long OnMessageSizeDelegate(string userID, string messageUniqueID);
-        public OnMessageSizeDelegate OnMessageSize { get; set; }
-
-        public delegate void OnMessageRetrievalDelegate(POP3MessageRetrievalRequest req);
-        public OnMessageRetrievalDelegate OnMessageRetrieval { get; set; }
-
-        public delegate void OnMessageDeleteDelegate(string userID, IList<string> uniqueIDs);
-        public OnMessageDeleteDelegate OnMessageDelete { get; set; }
 
 
         public void ListenOnStandard(IPAddress addr)

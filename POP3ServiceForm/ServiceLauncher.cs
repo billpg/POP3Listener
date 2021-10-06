@@ -49,10 +49,10 @@ namespace Pop3ServiceForm
             pop3.RequireSecureLogin = true;
             pop3.SecureCertificate = cert;
             pop3.MailboxProviderName = "Pop3ServiceForm";
-            pop3.OnAuthenticate = OnAuthenticateHandler;
-            pop3.OnListMailbox = OnListMailboxHandler;
-            pop3.OnMessageRetrieval = OnMessageRetrievalHandler;
-            pop3.OnMessageDelete = OnMessageDeleteHandler;
+            pop3.Events.OnAuthenticate = OnAuthenticateHandler;
+            pop3.Events.OnListMailbox = OnListMailboxHandler;
+            pop3.Events.OnMessageRetrieval = OnMessageRetrievalHandler;
+            pop3.Events.OnMessageDelete = OnMessageDeleteHandler;
         }
 
         private void AddLogEntry(string entry)

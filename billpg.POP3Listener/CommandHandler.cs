@@ -191,7 +191,7 @@ namespace billpg.pop3
 
             /* Construct an authentication request object and pass to provider. */
             POP3AuthenticationRequest authreq = new POP3AuthenticationRequest(this, this.unauthUserName, claimedPassClear);
-            service.OnAuthenticate(authreq);
+            service.Events.OnAuthenticate(authreq);
 
             /* Accepted? */
             if (authreq.AuthUserID != null)
@@ -226,7 +226,7 @@ namespace billpg.pop3
         private IList<string> RefreshUniqueIDsFromMailbox()
         {
             /* Load the new list of IDs from the mailbox interface object. */
-            var newUniqueIDs = this.service.OnListMailbox(this.authUserID).ToList().AsReadOnly();
+            var newUniqueIDs = this.service.Events.OnListMailbox(this.authUserID).ToList().AsReadOnly();
 
             /* If any are outside 33-126, return with a critical error. Otherwise, return them. */
             if (newUniqueIDs.All(IsGoodUniqueID))
@@ -279,7 +279,7 @@ namespace billpg.pop3
             var countedUniqueIDs = this.uniqueIDs.Except(this.deletedUniqueIDs).ToList();
 
             /* Loop through, loading the message size for each one. */
-            long totalBytes = countedUniqueIDs.Select(uniqueID => this.service.OnMessageSize(this.authUserID, uniqueID)).Sum();
+            long totalBytes = countedUniqueIDs.Select(uniqueID => this.service.Events.OnMessageSize(this.authUserID, uniqueID)).Sum();
 
             /* Return response. */
             return PopResponse.OKSingle($"{countedUniqueIDs.Count} {totalBytes}");
@@ -289,7 +289,7 @@ namespace billpg.pop3
         {
             return PerMessageOrSingle(id, Translate, "Message sizes follow...");
             string Translate(int messageID, string uniqueID)
-                => $"{messageID} {service.OnMessageSize(this.authUserID, uniqueID)}";
+                => $"{messageID} {service.Events.OnMessageSize(this.authUserID, uniqueID)}";
         }
 
         private PopResponse UIDL(string id)
@@ -378,7 +378,7 @@ namespace billpg.pop3
 
             /* Load the message from the provider. */
             POP3MessageRetrievalRequest request = new POP3MessageRetrievalRequest(authUserID, uniqueID, lineCountSend);
-            this.service.OnMessageRetrieval(request);
+            this.service.Events.OnMessageRetrieval(request);
 
             /* If RETR, return the whole message without a wrapper. */
             if (lineCountSend < 0)
@@ -409,7 +409,7 @@ namespace billpg.pop3
             PopResponse Internal(string uniqueID)
             {
                 /* Delete this single message with the mailbox provider. */
-                this.service.OnMessageDelete(this.authUserID, new List<string> { uniqueID }.AsReadOnly());
+                this.service.Events.OnMessageDelete(this.authUserID, new List<string> { uniqueID }.AsReadOnly());
 
                 /* Store this id so it will be excluded from future LIST/UIDL/tec. */
                 this.deletedUniqueIDs.Add(uniqueID);
@@ -460,7 +460,7 @@ namespace billpg.pop3
             messageCount = deletedUniqueIDs.Count;
 
             /* Send all the flagged unique IDs to the provider. */
-            this.service.OnMessageDelete(this.authUserID, deletedUniqueIDs.AsReadOnly());
+            this.service.Events.OnMessageDelete(this.authUserID, deletedUniqueIDs.AsReadOnly());
 
             /* If we get here, the provider didn't throw an exception. 
              * This means the state has successfuly changed. 
@@ -541,7 +541,7 @@ namespace billpg.pop3
                     throw new POP3ResponseException("That message has been deleted.");
 
                 /* Check if message still exists on mailbox. */
-                if (this.service.OnMessageExists(this.authUserID, uniqueID) == false)
+                if (this.service.Events.OnMessageExists(this.authUserID, uniqueID) == false)
                     throw new POP3ResponseException("That message has been expunged.");
 
                 /* Otherwise, return to caller. */
@@ -575,7 +575,7 @@ namespace billpg.pop3
                 }
 
                 /* Handle the new-message case. */
-                if (service.OnMessageExists(authUserID, selectedUniqueID))
+                if (service.Events.OnMessageExists(authUserID, selectedUniqueID))
                 {
                     messageID = 0;
                     uniqueID = selectedUniqueID;

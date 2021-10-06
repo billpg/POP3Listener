@@ -100,28 +100,6 @@ namespace billpg.pop3.Tests
         {
             return certificate.ThumbprintSHA256Base64() == selfSigned.ThumbprintSHA256Base64();
         }
-
-        private class WrapList : IMessageContent
-        {
-            private readonly List<string> msg;
-            private int nextLineIndex;
-
-            public WrapList(List<string> msg)
-            {
-                this.msg = msg;
-                this.nextLineIndex = 0;
-            }
-
-            void IMessageContent.Close() { /* Nothing to do. */ }
-
-            string IMessageContent.NextLine()
-            {
-                if (nextLineIndex < msg.Count)
-                    return msg[nextLineIndex++];
-                else
-                    return null;
-            }
-        }
     }
 }
 

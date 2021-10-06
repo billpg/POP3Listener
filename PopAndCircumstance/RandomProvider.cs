@@ -55,7 +55,7 @@ namespace PopAndCircumstance
         {
             /* Launch the listener. */
             var listen = new billpg.pop3.POP3Listener();
-            listen.OnAuthenticate = this.OnAuthenticateHandler;
+            listen.Events.OnAuthenticate = this.OnAuthenticateHandler;
             foreach (int port in this.insecurePorts)
                 listen.ListenOn(IPAddress.Loopback, port, false);
             foreach (int port in this.securePorts)

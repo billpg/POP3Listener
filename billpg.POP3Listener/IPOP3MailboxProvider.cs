@@ -121,7 +121,7 @@ namespace billpg.pop3
     }
 
 
-    public delegate string NextLineFn();
+    internal delegate string NextLineFn();
 
     public interface IPOP3ConnectionInfo
     {
