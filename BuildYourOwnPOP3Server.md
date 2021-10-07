@@ -65,73 +65,78 @@ If the supplied username and password is successful, the authentiction function 
 - Write an authentication function that queries this table.
 
 # Mailbox Contents.
+With an authentication function, we can now log-in to our mailbox, but the mailbox is empty. This is because the default message-list handler only ever responds 
+with an empty list of messages. We need to write a handler that returns a list of messages.
 
-
-This won’t compile because MyProvider doesn’t meet the requirements of the interface. Let’s add those.
-
-/* Inside the MyProvider class. */
-public string Name => "My Provider";
-
-public IPOP3Mailbox Authenticate(
-    IPOP3ConnectionInfo info, 
-    string username, 
-    string password)
+You can set the handler by setting the `Events.OnMessageList` property to your custom fuunction. For now, let's write a simple function that reads the contents of a folder. The service supplies the Mailbox ID which was set by the authentication function earlier.
+```
+/* Set the OnMessageList event. Insert this block just before the ListenOn call. */
+const string MAILBOX_FOLDER = @"C:/Set/This/To/An/Actual/Folder";
+pop3.Events.OnMessageList = MyMessageList;
+IEnumerable<string> MyMessageList(string mailboxID)
 {
-    return null;
+    /* If this is the mailbox ID we knw about, return the filenames from the folder. */
+    if (mailboxID == "My-Mailbox-ID")
+        return Directory.EnumerateFiles(FOLDER).Select(Path.GetFileName);
+
+    /* Not a known mailbox-ID, so return an emty collection. */
+    else
+        return Enumerable.Empty<string>();
 }
-Now, the service is just as unyielding to attempts to log-in, but we can confirm our provider code is running by adding a breakpoint to the Authenticate function. Now, when we attempt to log-in, we can see that the service has collected a username and password and is asking us if these are correct credentials or not. Returning a NULL means they’re not.
+```
 
-This might be a good opportunity to take a look at the info parameter. All of the functions where the listener calls to the provider will include this object, providing you with the client’s IP address, IDs, user names, etc. You don’t have to make use of them but your code may find the information useful.
+Now let's save an EML file into your mailbox folder. EML files are plain ASCII text files you can create with Notepad. Try copy-and-paste the following text into a file and save it into your mailbox.
+```
+From: John Rutabaga <john.rutabaga@example.com>
+To: Alice Rutabaga <alice.rutabaga@example.com>, Bob Rutabaga <bob.rutabaga@example.com>
+Subject: We are the Rutabagas of New York!
 
-A basic mailbox with no messages.
-We can change our Authenticate function to actually test credentials. For our play project we’ll just accept one combination of user-name and password.
+Hello my lovely family!
+```
 
-if (username == "me" && password == "passw0rd")
-    return new MyMailbox();
-else
-    return null;
-This will fail compilation because we’ve not written MyMailbox yet. Let’s go ahead and do that.
+Because we've not written a way to retrieve the message contents yet, POP3 commands `STAT` and `LIST` won't work but `UIDL` will. (We'll see why later.)
 
-class MyMailbox : IPOP3Mailbox
+If you're interacting with the server by typing commands directtly, send a `UIDL` command and you'll see a brief "folder listing" come back. The server has
+identified each file in your mailbox folder and is presenting the file-names as a list of messages. If you try to download one or query its size, it will fail,
+for now.
+
+## Suggested exercise:
+- Add a folder field to username/password table.
+- Return a list of files for the authenticated mailbox by returning that user's mailbox folder's contents.
+
+# Message Retrieval
+As discussed earlier, we can't do much with a mailbox listing without a way to retrieve that message. Again, this is a new handler you can set. The default
+handler only sends error responses so it needs to be replaced to have a useful POP3 service.
+
+```
+/* Set the OnMessageRetrieval event handler. Insert this block just before the ListenOn call. */
+pop3.Events.OnMessageRetrieval = MyMessageDownload;
+void MyMessageDownload(POP3MessageRetrievalRequest request)
 {
+    /* Is this the mailbox? */
+    if (request.AuthMailboxID == "My-Mailbox-ID")
+    {
+        /* Locate the EML file in the mailbox folder. */
+        string emlPath = Path.Combine(FOLDER, request.MessageUniqueID);
+        
+        /* Pass the EML file to the server and don't delete it. */
+        request.UseTextFile(emlPath, false);
+    }
 }
-Again, we’ll need to write all the requirements of the interface before we can run. So we can move on quickly, let’s provide just the minimum.
+```
 
-The first thing we’ll need is a list of the available messages. We’ll return an empty collection for now.
+Note that `UseTextFile` is a helper function. What the server expects is for two events to be set on the retrieval-request object: `OnNextLine` and `OnClose`.
+The server will call `OnNextLine` to get one more line of text until that function returns null. Afterwards, the server will call the `OnClose` function to
+conclude the process. (If the client sent a `TOP` command, the server will stop early once enough lines have been fetched and then call `OnClose.)
 
-public IList<string> ListMessageUniqueIDs(
-    IPOP3ConnectionInfo info)
-    => new List<string>();
-The service needs to know if a mailbox is read-only or not. Let’s say it isn’t.
+As well as `UseTextFile`, there is a `UseEnumerableLines` if a stream of strings is more your thing.
 
-public bool MailboxIsReadOnly(
-    IPOP3ConnectionInfo info)
-    => false;
-The service might sometimes need to know is a message exists or not. For now, it doesn’t.
+## Suggested exercises:
+- Write a retrieval function that uses the username/password/mailbox-folder table from earlier exercises.
+- Experiment setting `OnNextLine` and `OnClose` directly instead of going via the helpers.
+- Why do you think the server is calling your retrieval handler when the client makes a `STAT` or `LIST` call?
 
-public bool MessageExists(
-    IPOP3ConnectionInfo info,
-    string uniqueID)
-    => false;
-The client might request the size of a message before it downloads it and the service will pass the request along to the provider. I’ve often suspected that clients don’t really need this so let’s just return your favorite positive integer.
 
-public long MessageSize(
-   IPOP3ConnectionInfo info, 
-   string uniqueID)
-   => 58;
-The client will, in due course, request the contents of a message, but won’t because both the list-messages and message-exists will deny the existence of any messages, so for now, we can just return null.
-
-public IMessageContent MessageContents(
-    IPOP3ConnectionInfo info, 
-    string uniqueID)
-    => null;
-Finally, we need to handle message deletion. Again, we don’t need to do anything just yet.
-
-public void MessageDelete(
-    IPOP3ConnectionInfo info, 
-    IList<string> uniqueIDs)
-{}
-And we’re done. Run the code and log-in. Your mailbox will be perpetually empty but you can add breakpoints and confirm everything is running.
 
 List the messages.
 Now, let’s actually start with something useful. Let’s change our ListMessageUniqueIDs to return a list of filenames from a folder. You’ll want to replace the value of FOLDER with something that works for you.
