@@ -65,7 +65,7 @@ namespace billpg.pop3.Tests
                 "... Three dots."               
             };
 
-            request.UseLines(msg);
+            request.UseEnumerableLines(msg);
         }
 
 

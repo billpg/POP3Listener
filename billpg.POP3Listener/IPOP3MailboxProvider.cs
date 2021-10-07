@@ -56,7 +56,7 @@ namespace billpg.pop3
             this.AcceptRetrieval = false;
         }
 
-        public void UseLines(IEnumerable<string> lines)
+        public void UseEnumerableLines(IEnumerable<string> lines)
         {
             /* Start the enumerable and set an OnNextLine and OnClose to read that enumerator. */
             var lineEnum = lines.GetEnumerator();
@@ -68,8 +68,25 @@ namespace billpg.pop3
             this.AcceptRetrieval = true;
         }
 
-        public void UseTextFile(string path)
-            => UseLines(System.IO.File.ReadLines(path));
+        public void UseTextFile(string emlPath, bool deleteAfter)
+        {
+            /* Open the file for reading. */
+            var emlStream = System.IO.File.OpenText(emlPath);
+
+            /* Pass the stream's reader and closer as event handlers. */
+            this.OnNextLine = emlStream.ReadLine;
+            if (deleteAfter)
+                this.OnClose = DisposeAndDelete;
+            else
+                this.OnClose = emlStream.Dispose;
+
+            /* Function used when deleteAfter==true. */
+            void DisposeAndDelete()
+            {
+                emlStream.Dispose();
+                System.IO.File.Delete(emlPath);
+            }
+        }
     }
 
     public delegate void RaiseNewMessageEvent(string mailboxID);

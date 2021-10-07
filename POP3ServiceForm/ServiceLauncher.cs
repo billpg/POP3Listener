@@ -122,7 +122,7 @@ namespace Pop3ServiceForm
             {
                 string rfc = UserByName(request.AuthMailboxID).Messages[request.MessageUniqueID].AsRfc822;
                 var lines = rfc.Split('\r').Select(line => line.Trim()).ToList();
-                request.UseLines(lines);
+                request.UseEnumerableLines(lines);
             }
         }
 
