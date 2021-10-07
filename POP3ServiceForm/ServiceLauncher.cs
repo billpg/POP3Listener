@@ -48,7 +48,7 @@ namespace Pop3ServiceForm
             pop3.ListenOnStandard(IPAddress.Loopback);
             pop3.RequireSecureLogin = true;
             pop3.SecureCertificate = cert;
-            pop3.MailboxProviderName = "Pop3ServiceForm";
+            pop3.ServiceName = "Pop3ServiceForm";
             pop3.Events.OnAuthenticate = OnAuthenticateHandler;
             pop3.Events.OnMessageList = OnMessageListHandler;
             pop3.Events.OnMessageRetrieval = OnMessageRetrievalHandler;
