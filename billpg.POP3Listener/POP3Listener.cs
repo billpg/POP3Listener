@@ -33,8 +33,7 @@ namespace billpg.pop3
             RequireSecureLogin = true;
         }
 
-        public string MailboxProviderName { get; set; } = null;
-
+        public string ServiceName { get; set; } = "POP3 service by billpg industries https://billpg.com/POP3/";
 
         public void ListenOnStandard(IPAddress addr)
         {

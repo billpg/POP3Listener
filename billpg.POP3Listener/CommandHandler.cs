@@ -12,20 +12,6 @@ namespace billpg.pop3
     internal class CommandHandler: IPOP3ConnectionInfo
     {
         private readonly POP3Listener service;
-        private string serviceDescription
-        {
-            get
-            {
-                /* Load the provider's name and add brackets if used. */
-                string providerName = service.MailboxProviderName;
-                string withBrackets = string.IsNullOrEmpty(providerName) ? "" : $"({providerName}) ";
-
-                /* Completed string. */
-                return $"billpg industries POP3 Listener {ServiceVersion} {withBrackets}https://billpg.com/POP3/";
-            }
-        }
-        private string ServiceVersion => this.GetType().Assembly.GetName().Version.ToString();
-
 
         private string unauthUserName = null;
         private string userNameAtLogin = null;
@@ -80,7 +66,7 @@ namespace billpg.pop3
         }
 
         internal PopResponse Connect()
-            => PopResponse.OKSingle(serviceDescription);
+            => PopResponse.OKSingle(service.ServiceName);
 
         internal PopResponse Command(long commandSequenceID, string command, string pars)
         {
@@ -122,10 +108,11 @@ namespace billpg.pop3
             List<string> resp = new List<string>(capabilities);
 
             /* Add IMPLEMENTATION from provider. */
-            resp.Insert(0, "IMPLEMENTATION " + serviceDescription);
+            resp.Insert(0, "IMPLEMENTATION " + service.ServiceName);
 
-            /* Add CAPA-VERSION. */
-            resp.Insert(0, $"CAPA-VERSION "+ ServiceVersion);
+            /* Add link to my site if ServiceName doesn't include it. */
+            if (service.ServiceName.Contains("/billpg.com/") == false)
+                resp.Add("X-ENGINE http://billpg.com/POP3/");
 
             /* Add STLS only if we have a TLS cert and not already secure. */
             if (activeConnection.IsSecure == false && service.SecureCertificate != null)
