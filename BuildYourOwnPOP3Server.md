@@ -24,6 +24,8 @@ namespace BuildYourOwnPop3Service
         {
             /* Launch POP3. */
             var pop3 = new POP3Listener();
+            
+            /* Start listening. */
             pop3.ListenOn(IPAddress.Loopback, 110, false);
 
             /* Keep running until the process is killed. */
@@ -36,20 +38,33 @@ This is the bare minimum to run a POP3 service. It’ll only accept local connec
 port you’re listening on to 1100. Either way, try connecting to it. You can set up your mail reader or use telnet to connect in and type commands.
 
 # Accepting log-in requests.
-You’ll notice that any username and password combination fails. This is because you’ve not set up anything to handle authentication requests yet.
-If you don’t set one up, the default event handler just rejects all attempts to log in. Let’s write one.
+You’ll notice that any username and password combination fails. This is because the default authentication handler is in place, one which rejects all attempts to
+log-in. That's not very useful so let’s write one and set it as the `Events.OnAuthenticate` property.
 
 ```
-/* Add between listener constructor and call to ListenOn. */
+/* Add this code between listener constructor and call to ListenOn. */
 pop3.Events.OnAuthenticate = MyAuthenticationHandler;
 void MyAuthentictionHandler(POP3AuthenticationRequest request)
 {
+    /* Is this the only valid username and password? */
+    if (request.SuppliedUsername == "me" && request.SuppliedPassword == "passw0rd")
+    {
+        /* It is. Pass back the user's authenticated mailbox ID back to the server. */
+        request.AuthMailboxID = "My-Mailbox-ID";
+    }
 }
 ```
 
-This still doesn't allow any log-in requests, but we can now put a breakpoint in this function and see what happens when the function is called.
-While you are in debug mde, you can poke about the request object and see what's there.
+With the `OnAuthenticate` propery set, the server will now pass all login requests to your function. You could set a breakpoint and take a look at the other
+properties of the `request` object, including the client's IP. 
 
+If the supplied username and password is successful, the authentiction function sets the user's autenticated mailbox ID. Other calls from the service to your code will pass this mailbox ID along to identify which mailbox the user is interacting with. What a mailbox ID looks like is up to you. Any string value (within reason) is fine except NULL. It could be a copy of the supplied username, a stringified primary key value, anything as long as the value is consistent.
+
+## Suggested exercise:
+- Create a table of usernames and hashed passwords. (Database table, text file, up to you.)
+- Write an authentication function that queries this table.
+
+# Mailbox Contents.
 
 
 This won’t compile because MyProvider doesn’t meet the requirements of the interface. Let’s add those.
