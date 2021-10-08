@@ -527,10 +527,6 @@ namespace billpg.pop3
                 if (string.IsNullOrEmpty(uniqueID) || deletedUniqueIDs.Contains(uniqueID))
                     throw new POP3ResponseException("That message has been deleted.");
 
-                /* Check if message still exists on mailbox. */
-                if (this.service.Events.OnMessageExists(this.authMailboxID, uniqueID) == false)
-                    throw new POP3ResponseException("That message has been expunged.");
-
                 /* Otherwise, return to caller. */
                 return;
             }
@@ -561,12 +557,16 @@ namespace billpg.pop3
                     }
                 }
 
-                /* Handle the new-message case. */
-                if (service.Events.OnMessageExists(authMailboxID, selectedUniqueID))
+                /* Handle the new-message case? */
+                if (this.service.AllowUnknownIDRequests)
                 {
-                    messageID = 0;
-                    uniqueID = selectedUniqueID;
-                    return;
+                    /* Does the requested ID exist on a fresh copy of the list of messages? */
+                    if (service.Events.OnMessageList(authMailboxID).Contains(selectedUniqueID))
+                    {
+                        messageID = 0;
+                        uniqueID = selectedUniqueID;
+                        return;
+                    }
                 }
 
                 /* No such message. */

@@ -23,6 +23,7 @@ namespace billpg.pop3
         private static long nextConnectionID = 5000000001;
         internal static long GenConnectionID() => System.Threading.Interlocked.Increment(ref nextConnectionID);
         public POP3Events Events { get; } = new POP3Events();
+        public bool AllowUnknownIDRequests { get; set; } = true;
 
         public POP3Listener()
         {

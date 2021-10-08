@@ -27,6 +27,72 @@ namespace billpg.pop3.Tests
         private int port110 => 1100;
 
         [TestMethod]
+        public void POP3_ExcessiveMessageList()
+        {
+            /* Construct a listener. */
+            POP3Listener pop3 = new POP3Listener();
+            pop3.Events.OnAuthenticate = req => req.AuthMailboxID = "x";
+
+            /* Set up a mailbox-list handler that updates a counter each time it is called. */
+            int messageListInvokedCount = 0;
+            pop3.Events.OnMessageList = IncrementCounter;
+            IEnumerable<string> IncrementCounter(string mailboxID)
+            {
+                System.Threading.Interlocked.Increment(ref messageListInvokedCount);
+                return "a,b,c,d".Split(',');
+            }
+
+            /* Connect to the server. */
+            pop3.ListenOn(IPAddress.Loopback, port110, false);
+            try
+            {
+                using (var tcp = new TcpClient("localhost", port110))
+                {
+                    using (var str = tcp.GetStream())
+                    {
+                        /* Read welcome banner. */
+                        var banner = ReadLine(str);
+                        Assert.AreEqual("+OK POP3 service by billpg industries https://billpg.com/POP3/", banner);
+
+                        /* Login. Check message list has been called exactly once. */
+                        WriteLine(str, "XLOG x x");
+                        var xlogResp = ReadLine(str);
+                        Assert.AreEqual("+OK Welcome.", xlogResp);
+                        Assert.AreEqual(1, messageListInvokedCount);
+
+                        /* Call UIDL. */
+                        WriteLine(str, "UIDL");
+                        var uidlResp = string.Join("/", ReadMultiLineIfOkay(str));
+                        Assert.AreEqual("+OK Unique-IDs follow... _/1 a/2 b/3 c/4 d", uidlResp);
+                        Assert.AreEqual(1, messageListInvokedCount);
+
+                        /* Download a message. */
+                        WriteLine(str, "RETR 1");
+                        var retr1Resp = ReadLine(str);
+                        Assert.AreEqual("-ERR OnMessageRetrieval handler not set.", retr1Resp);
+                        Assert.AreEqual(1, messageListInvokedCount);
+
+                        /* Download a message by UID that the server already knows about. */
+                        WriteLine(str, "RETR UID:c");
+                        var retr2resp = ReadLine(str);
+                        Assert.AreEqual("-ERR OnMessageRetrieval handler not set.", retr2resp);
+                        Assert.AreEqual(1, messageListInvokedCount);
+
+                        /* Now request a UID that doesn't exist. */
+                        WriteLine(str, "RETR UID:z");
+                        var retr3resp = ReadLine(str);
+                        Assert.AreEqual("-ERR [UID/NOT-FOUND] No such UID.", retr3resp);
+                        Assert.AreEqual(2, messageListInvokedCount);
+                    }
+                }
+            }
+            finally
+            {
+                pop3.Stop();
+            }
+        }
+
+        [TestMethod]
         public void POP3_SLEE_WAKE()
         {
             RunTestLoggedIn(Internal);
