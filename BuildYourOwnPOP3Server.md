@@ -25,6 +25,8 @@ namespace BuildYourOwnPop3Service
             /* Launch POP3. */
             var pop3 = new POP3Listener();
             
+            /* INSERT EVENT HANDLER CODE HERE. */
+
             /* Start listening. */
             pop3.ListenOn(IPAddress.Loopback, 110, false);
 
@@ -155,7 +157,7 @@ But since this is just a play project, we can play fast and loose with such thin
 - Make the delete operation atomic. Consider what needs to happen if something goes wrong part way through.
 - Think about what should happen if the server requests deleting a message that's already gone.
 
-# Why does the server download all the messages in the mailbox everytime I log-in?
+# "Why does the server download all the messages in the mailbox everytime I log-in?"
 Because the client is calling the `STAT` command and the server needs to know how big the messages are to send back to the client. Sometimes the server needs 
 to know how big a message is and the default handler does it by reading the message ad counting bytes. As you almost certainly
 have a better way of finding the size of a message, you can provide your own handler that does this job better.
@@ -165,5 +167,17 @@ have a better way of finding the size of a message, you can provide your own han
 ```
 ```
     
+# "That call to Path.Combine looks dangerous!"
+It does, well done for spotting it, but don't panic.
+
+The example code above doesn't validate the message's ID strings at all, so you might wonder what's stopping a doer-of-evil from requesting, 
+say `"..\Other-User\Message.EML"` while Path.Combine duitifuly moves into the parent folder and into someone else's messages. 
+
+Fortunately, the server checks the IDs requested by the client before passing them onto your custom code. If the client requests a message that isn't
+on the list returned by `OnMessageList`, the request will be rejected. 
+
+What this means is that your custom retrieval and deletion handlers are free to skip validation because the server will only pass along requests for
+IDs your code had already created first.
+
 # What now?
 I hope you enjoyed building your very own POP3 service using the POP3 Listener component. The above was a simple project to get you going. If you do encounter an issue or you have a question, please open an issue on the project’s github page.

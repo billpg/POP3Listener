@@ -93,6 +93,58 @@ namespace billpg.pop3.Tests
         }
 
         [TestMethod]
+        public void POP3_NoPassBadUniqueIDs()
+        {
+            /* Construct a listener. */
+            POP3Listener pop3 = new POP3Listener();
+            pop3.Events.OnAuthenticate = req => req.AuthMailboxID = "x";
+
+            /* Set up a mailbox-list handler with some messages. */
+            pop3.Events.OnMessageList = IncrementCounter;
+            IEnumerable<string> IncrementCounter(string mailboxID)
+                => "a,b,c,d".Split(',');
+
+            /* Set up download and delete functions that raise a flag is called. */
+            bool wasCalled = false;
+            pop3.Events.OnMessageRetrieval = req =>  wasCalled = true;
+            pop3.Events.OnMessageDelete = (x, y) => wasCalled = true;
+
+            /* Connect to the server. */
+            pop3.ListenOn(IPAddress.Loopback, port110, false);
+            try
+            {
+                using (var tcp = new TcpClient("localhost", port110))
+                {
+                    using (var str = tcp.GetStream())
+                    {
+                        /* Send a sequence of commands. */
+                        WriteLine(str, "XLOG x x\r\nRETR UID:x\r\nDELE UID:x");
+
+                        /* Read back the welcome banner and the responses to the three commands. */
+                        Assert.AreEqual("+OK POP3 service by billpg industries https://billpg.com/POP3/", ReadLine(str));
+                        Assert.AreEqual("+OK Welcome.", ReadLine(str));
+                        Assert.AreEqual("-ERR [UID/NOT-FOUND] No such UID.", ReadLine(str));
+                        Assert.AreEqual("-ERR [UID/NOT-FOUND] No such UID.", ReadLine(str));
+
+                        /* Check UID:x did not cause a download or delete event. */
+                        Assert.IsFalse(wasCalled);
+
+                        /* Now request a real message. This should raise the flag this time.
+                         * (The critical error is because the above download handler didn't set OnNextLine.) */
+                        WriteLine(str, "RETR UID:a");
+                        Assert.AreEqual("+OK Message text follows... _", ReadLine(str));
+                        Assert.AreEqual("-ERR [SYS/TEMP] Critical error. Closing conection.", ReadLine(str));
+                        Assert.IsTrue(wasCalled);
+                    }
+                }
+            }
+            finally
+            {
+                pop3.Stop();
+            }
+        }            
+
+        [TestMethod]
         public void POP3_SLEE_WAKE()
         {
             RunTestLoggedIn(Internal);
