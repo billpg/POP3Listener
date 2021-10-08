@@ -43,6 +43,7 @@ log-in. That's not very useful so let’s write one and set it as the `Events.On
 
 ```
 /* Add this code between listener constructor and call to ListenOn. */
+const string myMailboxID = "My-Mailbox-ID";
 pop3.Events.OnAuthenticate = MyAuthenticationHandler;
 void MyAuthentictionHandler(POP3AuthenticationRequest request)
 {
@@ -50,7 +51,7 @@ void MyAuthentictionHandler(POP3AuthenticationRequest request)
     if (request.SuppliedUsername == "me" && request.SuppliedPassword == "passw0rd")
     {
         /* It is. Pass back the user's authenticated mailbox ID back to the server. */
-        request.AuthMailboxID = "My-Mailbox-ID";
+        request.AuthMailboxID = myMailboxID;
     }
 }
 ```
@@ -75,13 +76,12 @@ const string MAILBOX_FOLDER = @"C:/Set/This/To/An/Actual/Folder";
 pop3.Events.OnMessageList = MyMessageList;
 IEnumerable<string> MyMessageList(string mailboxID)
 {
-    /* If this is the mailbox ID we knw about, return the filenames from the folder. */
-    if (mailboxID == "My-Mailbox-ID")
-        return Directory.EnumerateFiles(FOLDER).Select(Path.GetFileName);
+    /* Check mailbox ID. */
+    if (request.AuthMailboxID != myMailboxID)
+        throw new ApplicationException("Invalid mailbox ID.");
 
-    /* Not a known mailbox-ID, so return an empty collection. */
-    else
-        return Enumerable.Empty<string>();
+    /* Return just the filenames for each file in the folder. */
+    return Directory.EnumerateFiles(FOLDER).Select(Path.GetFileName);
 }
 ```
 
@@ -113,15 +113,19 @@ handler only sends error responses so it needs to be replaced to have a useful P
 pop3.Events.OnMessageRetrieval = MyMessageDownload;
 void MyMessageDownload(POP3MessageRetrievalRequest request)
 {
-    /* Is this the mailbox? */
-    if (request.AuthMailboxID == "My-Mailbox-ID")
-    {
-        /* Locate the EML file in the mailbox folder. */
-        string emlPath = Path.Combine(FOLDER, request.MessageUniqueID);
-        
-        /* Pass the EML file to the server and don't delete it. *
-        request.UseTextFile(emlPath, false);
-    }
+    /* Check mailbox ID. */
+    if (request.AuthMailboxID != myMailboxID)
+        throw new ApplicationException("Invalid mailbox ID.");
+    
+    /* Locate the EML file in the mailbox folder. */
+    string emlPath = Path.Combine(FOLDER, request.MessageUniqueID);
+    
+    /* Check file exists. */
+    if (File.Exists(emlPath) == false)
+        throw new POP3ResponseException("Message has been expunged.")
+
+    /* Pass the EML file to the server and don't delete it. *
+    request.UseTextFile(emlPath, false);
 }
 ```
 
@@ -133,41 +137,33 @@ As well as `UseTextFile`, there is a `UseEnumerableLines` if a stream of strings
 
 ## Suggested exercises:
 - Experiment setting `OnNextLine` and `OnClose` directly instead of going via the helpers.
-- 
 - Why do you think the server is calling your retrieval handler when the client makes a `STAT` or `LIST` call?
 
 # Delete Messages
-POP3 is designed to work on a download-and-delete model. The client sends a `DELE` command for each message it wants to delete once it has downloaded it, but the command to commit the delete commands is `QUIT`. Because the protocol requires that many deletes are batched, the interface from the server to your code supplies many message's unique IDs to be deleted as an atomic operation. This is necessary because the protocol requires that a set of messages are deleted in an atomic manner. Either all of them are deleted or none of them are deleted. We can’t have a situation where some of messages are deleted but some are still there.
+POP3 is designed to work on a download-and-delete model. The client sends a `DELE` command for each message it wants to delete once it has downloaded it, but
+the command to commit the delete commands is `QUIT`. Because the protocol requires that many deletes are batched, the interface from the server to your code
+supplies many message's unique IDs to be deleted as an atomic operation. This is necessary because the protocol requires that a set of messages are deleted in
+an atomic manner. Either all of them are deleted or none of them are deleted. We can’t have a situation where some of messages are deleted but some are still
+there.
 
 But since this is just a play project, we can play fast and loose with such things. Atomic operations? Gluons more like!
 
 ```
-
 ```
    
 ## Suggested exercises:
-- How could you make the delete operation atomic? What if something goes wrong part way through?
-- What happens if the server is asking you to delete a message that's already gone?
-   
-   
+- Make the delete operation atomic. Consider what needs to happen if something goes wrong part way through.
+- Think about what should happen if the server requests deleting a message that's already gone.
+
 # Why does the server download all the messages in the mailbox everytime I log-in?
-Because the client is calling the `STAT` command and the server needs to know how big the messages are to send back to the client.
+Because the client is calling the `STAT` command and the server needs to know how big the messages are to send back to the client. Sometimes the server needs 
+to know how big a message is and the default handler does it by reading the message ad counting bytes. As you almost certainly
+have a better way of finding the size of a message, you can provide your own handler that does this job better.
 
-I would argue a well written POP3 client should only call `UIDL` to get the state of a mailbox instead of `STAT` or `LIST`, but this is where we're at. Sometimes the server needs to know how big a message is and the default handler does it by reading the message ad counting bytes. As you almost certainly have a better way of finding the size of a message, you can provide your own handler.
+(I would argue a well written POP3 client should only call `UIDL` to get the state of a mailbox instead of `STAT` or `LIST`, but this is where we're at.)
 
 ```
-
 ```
-
-# Why 
-
-Note that the command handling code inside this library has an extension that allows the client to ask for a message by an arbitrary unique ID. Make sure your code doesn’t allow, for example, “../../../../my-secret-file.txt”. Observe the code above checks that the requested unique ID is in the list of acceptable message IDs by going through MessageExists.
-
     
-    What now?
-I hope you enjoyed building your very own POP3 service using the POP3 Listener component. The above was a simple project to get you going.
-
-billpg.com
-Maybe think about your service could handle multiple users and how you’d check their passwords. What would be a good way to achieve atomic transactions on delete? What happens if someone deletes the file in a mailbox folder just as they’re about to download it?
-
-If you do encounter an issue or you have a question, please open an issue on the project’s github page.
+# What now?
+I hope you enjoyed building your very own POP3 service using the POP3 Listener component. The above was a simple project to get you going. If you do encounter an issue or you have a question, please open an issue on the project’s github page.
