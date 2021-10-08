@@ -79,7 +79,7 @@ IEnumerable<string> MyMessageList(string mailboxID)
     if (mailboxID == "My-Mailbox-ID")
         return Directory.EnumerateFiles(FOLDER).Select(Path.GetFileName);
 
-    /* Not a known mailbox-ID, so return an emty collection. */
+    /* Not a known mailbox-ID, so return an empty collection. */
     else
         return Enumerable.Empty<string>();
 }
@@ -119,7 +119,7 @@ void MyMessageDownload(POP3MessageRetrievalRequest request)
         /* Locate the EML file in the mailbox folder. */
         string emlPath = Path.Combine(FOLDER, request.MessageUniqueID);
         
-        /* Pass the EML file to the server and don't delete it. */
+        /* Pass the EML file to the server and don't delete it. *
         request.UseTextFile(emlPath, false);
     }
 }
@@ -132,89 +132,39 @@ conclude the process. (If the client sent a `TOP` command, the server will stop 
 As well as `UseTextFile`, there is a `UseEnumerableLines` if a stream of strings is more your thing.
 
 ## Suggested exercises:
-- Write a retrieval function that uses the username/password/mailbox-folder table from earlier exercises.
 - Experiment setting `OnNextLine` and `OnClose` directly instead of going via the helpers.
+- 
 - Why do you think the server is calling your retrieval handler when the client makes a `STAT` or `LIST` call?
 
+# Delete Messages
+POP3 is designed to work on a download-and-delete model. The client sends a `DELE` command for each message it wants to delete once it has downloaded it, but the command to commit the delete commands is `QUIT`. Because the protocol requires that many deletes are batched, the interface from the server to your code supplies many message's unique IDs to be deleted as an atomic operation. This is necessary because the protocol requires that a set of messages are deleted in an atomic manner. Either all of them are deleted or none of them are deleted. We can’t have a situation where some of messages are deleted but some are still there.
 
+But since this is just a play project, we can play fast and loose with such things. Atomic operations? Gluons more like!
 
-List the messages.
-Now, let’s actually start with something useful. Let’s change our ListMessageUniqueIDs to return a list of filenames from a folder. You’ll want to replace the value of FOLDER with something that works for you.
+```
 
-const string FOLDER = @"C:\MyMailbox\";
+```
+   
+## Suggested exercises:
+- How could you make the delete operation atomic? What if something goes wrong part way through?
+- What happens if the server is asking you to delete a message that's already gone?
+   
+   
+# Why does the server download all the messages in the mailbox everytime I log-in?
+Because the client is calling the `STAT` command and the server needs to know how big the messages are to send back to the client.
 
-public IList<string> ListMessageUniqueIDs(
-    IPOP3ConnectionInfo info)
-    => Directory.GetFiles(FOLDER)
-           .Select(Path.GetFileName)
-           .ToList();
+I would argue a well written POP3 client should only call `UIDL` to get the state of a mailbox instead of `STAT` or `LIST`, but this is where we're at. Sometimes the server needs to know how big a message is and the default handler does it by reading the message ad counting bytes. As you almost certainly have a better way of finding the size of a message, you can provide your own handler.
 
-public bool MessageExists(
-    IPOP3ConnectionInfo info, 
-    string uniqueID)
-    => ListMessageUniqueIDs(info)
-           .Contains(uniqueID);
-Let’s also place an EML file into our mailbox folder. If you don’t have an EML file to hand, you can write your own using notepad. (It doesn’t care if the file has a “.txt” extension.)
+```
 
-Subject: I'm a very simple EML file.
-From: me@example.com
-To: you@example.com
+```
 
-Message body goes after a blank line.
-If we save that into our mailbox folder and run up the POP3 service, we’ll see there’s a message available. It won’t be able to download it though.
-
-Download the message,
-The MessageContents function expects an new object that implements the IMessageContent interface.
-
-/* Replace the MessageContents function. */
-public IMessageContent MessageContents(
-    IPOP3ConnectionInfo info, 
-    string uniqueID)
-{
-    if (MessageExists(info, uniqueID))
-        return new MyMessageContents(
-                       Path.Combine(FOLDER, uniqueID));
-    else
-        return null;
-}
-
-/* New class. */
-class MyMessageContents : IMessageContent
-{
-    List<string> lines;
-    int index;
-
-    public MyMessageContents(string path)
-    {
-        lines = File.ReadAllLines(path).ToList();
-        index = 0;
-    }
-
-    public string NextLine()
-        => (index < lines.Count) ? lines[index++] : null;
-
-    public void Close()
-    {
-    }
-}
-This shows the requirements of the object that regurgitates a single message’s contents. A function that returns the next line, one-by-one, and another that’s called to close down the stream. The Close function could close opened file streams or delete temporary files, but we don’t need it to do anything in our play project.
+# Why 
 
 Note that the command handling code inside this library has an extension that allows the client to ask for a message by an arbitrary unique ID. Make sure your code doesn’t allow, for example, “../../../../my-secret-file.txt”. Observe the code above checks that the requested unique ID is in the list of acceptable message IDs by going through MessageExists.
 
-Delete messages.
-The interface to delete messages passes along a collection of string IDs. This is necessary because the protocol requires that a set of messages are deleted in an atomic manner. Either all of them are deleted or none of them are deleted. We can’t have a situation where some of messages are deleted but some are still there.
-
-But since this is just a play project, we can play fast and loose with such things.
-
-public void MessageDelete(
-     IPOP3ConnectionInfo info, 
-     IList<string> uniqueIDs)
-{
-    foreach (var toDelete in uniqueIDs)
-        if (MessageExists(info, toDelete))
-            File.Delete(Path.Combine(FOLDER, toDelete));
-}
-What now?
+    
+    What now?
 I hope you enjoyed building your very own POP3 service using the POP3 Listener component. The above was a simple project to get you going.
 
 billpg.com
