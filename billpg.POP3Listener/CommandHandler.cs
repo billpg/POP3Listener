@@ -443,8 +443,10 @@ namespace billpg.pop3
 
         private void DeleteFlaggedMessages(out int messageCount)
         {
-            /* Store the message count before attempting. */
+            /* Store the message count before attempting. Exit early if no messages to delete. */
             messageCount = deletedUniqueIDs.Count;
+            if (messageCount == 0)
+                return;
 
             /* Send all the flagged unique IDs to the provider. */
             this.service.Events.OnMessageDelete(this.authMailboxID, deletedUniqueIDs.AsReadOnly());
