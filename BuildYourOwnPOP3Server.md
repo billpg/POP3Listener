@@ -44,9 +44,9 @@ You’ll notice that any username and password combination fails. This is becaus
 log-in. That's not very useful so let’s write one and set it as the `Events.OnAuthenticate` property.
 
 ```
-/* Add this code between listener constructor and call to ListenOn. */
-const string myMailboxID = "My-Mailbox-ID";
-pop3.Events.OnAuthenticate = MyAuthenticationHandler;
+/* Set our custom authentication function. */
+const string myMailboxID = "My-Authenticated-Mailbox-ID";
+pop3.Events.OnAuthenticate = MyAuthentictionHandler;
 void MyAuthentictionHandler(POP3AuthenticationRequest request)
 {
     /* Is this the only valid username and password? */
@@ -61,7 +61,9 @@ void MyAuthentictionHandler(POP3AuthenticationRequest request)
 With the `OnAuthenticate` propery set, the server will now pass all login requests to your function. You could set a breakpoint and take a look at the other
 properties of the `request` object, including the client's IP. 
 
-If the supplied username and password is successful, the authentiction function sets the user's autenticated mailbox ID. Other calls from the service to your code will pass this mailbox ID along to identify which mailbox the user is interacting with. What a mailbox ID looks like is up to you. Any string value (within reason) is fine except NULL. It could be a copy of the supplied username, a stringified primary key value, anything as long as the value is consistent.
+If the supplied username and password is successful, the authentiction function sets the user's autenticated mailbox ID. Other calls from the service to your code 
+will pass this mailbox ID along to identify which mailbox the user is interacting with. What a mailbox ID looks like is up to you. Any string value (within reason) 
+is fine except NULL. It could be a copy of the supplied username, a stringified primary key value, anything as long as the value is consistent.
 
 ## Suggested exercise:
 - Create a table of usernames and hashed passwords. (Database table, text file, up to you.)
@@ -71,26 +73,32 @@ If the supplied username and password is successful, the authentiction function 
 With an authentication function, we can now log-in to our mailbox, but the mailbox is empty. This is because the default message-list handler only ever responds 
 with an empty list of messages. We need to write a handler that returns a list of messages.
 
-You can set the handler by setting the `Events.OnMessageList` property to your custom fuunction. For now, let's write a simple function that reads the contents of a folder. The service supplies the Mailbox ID which was set by the authentication function earlier.
+You can set the handler by setting the `Events.OnMessageList` property to your custom fuunction. For now, let's write a simple function that reads the contents of 
+a folder. The service supplies the Mailbox ID which was set by the authentication function earlier.
 ```
-/* Set the OnMessageList event. Insert this block just before the ListenOn call. */
-const string MAILBOX_FOLDER = @"C:/Set/This/To/An/Actual/Folder";
+/* Create (if needed) a folder to monitor for messages. */
+string mailboxFolder = Path.Combine(Path.GetTempPath(), "MyMailboxFolder");
+Directory.CreateDirectory(mailboxFolder);
+Console.WriteLine($"Mailbox: {mailboxFolder}");
+
+/* Set our custom function that returns a list of messages for a mailbox. */
 pop3.Events.OnMessageList = MyMessageList;
 IEnumerable<string> MyMessageList(string mailboxID)
 {
     /* Check mailbox ID. */
-    if (request.AuthMailboxID != myMailboxID)
+    if (mailboxID != myMailboxID)
         throw new ApplicationException("Invalid mailbox ID.");
 
     /* Return just the filenames for each file in the folder. */
-    return Directory.EnumerateFiles(FOLDER).Select(Path.GetFileName);
+    return Directory.EnumerateFiles(mailboxFolder).Select(Path.GetFileName);
 }
 ```
 
-Now let's save an EML file into your mailbox folder. EML files are plain ASCII text files you can create with Notepad. Try copy-and-paste the following text into a file and save it into your mailbox.
+Now let's save an EML file into your mailbox folder. EML files are plain ASCII text files you can create with Notepad. Try copy-and-paste the following text into 
+a file and save it into your mailbox.
 ```
-From: John Rutabaga <john.rutabaga@example.com>
-To: Alice Rutabaga <alice.rutabaga@example.com>, Bob Rutabaga <bob.rutabaga@example.com>
+From: Alice Rutabaga <alice.rutabaga@example.com>
+To: Bob Rutabaga <bob.rutabaga@example.com>, Carol Rutabaga <carol.rutabaga@example.com>
 Subject: We are the Rutabagas of New York!
 
 Hello my lovely family!
@@ -109,24 +117,23 @@ for now.
 # Message Retrieval
 As discussed earlier, we can't do much with a mailbox listing without a way to retrieve that message. Again, this is a new handler you can set. The default
 handler only sends error responses so it needs to be replaced to have a useful POP3 service.
-
 ```
-/* Set the OnMessageRetrieval event handler. Insert this block just before the ListenOn call. */
+/* Set a function that returns the message contents. */
 pop3.Events.OnMessageRetrieval = MyMessageDownload;
 void MyMessageDownload(POP3MessageRetrievalRequest request)
 {
     /* Check mailbox ID. */
     if (request.AuthMailboxID != myMailboxID)
         throw new ApplicationException("Invalid mailbox ID.");
-    
+
     /* Locate the EML file in the mailbox folder. */
-    string emlPath = Path.Combine(FOLDER, request.MessageUniqueID);
-    
+    string emlPath = Path.Combine(mailboxFolder, request.MessageUniqueID);
+
     /* Check file exists. */
     if (File.Exists(emlPath) == false)
-        throw new POP3ResponseException("Message has been expunged.")
-
-    /* Pass the EML file to the server and don't delete it. *
+        throw new POP3ResponseException("Message has been expunged.");
+            
+    /* Pass the EML file to the server but don't delete it. */
     request.UseTextFile(emlPath, false);
 }
 ```
@@ -149,8 +156,20 @@ an atomic manner. Either all of them are deleted or none of them are deleted. We
 there.
 
 But since this is just a play project, we can play fast and loose with such things. Atomic operations? Gluons more like!
-
 ```
+/* Set a custom function that deletes a block of messages. */
+pop3.Events.OnMessageDelete = MyMessageDelete;
+void MyMessageDelete(string mailboxID, IList<string> messagesToDelete)
+{
+    /* Check mailbox ID. */
+    if (mailboxID != myMailboxID)
+        throw new ApplicationException("Invalid mailbox ID.");
+
+    /* Delete each message one at a time, 
+        * glibly ignoring the principle of an atomic operation. */
+    foreach (string messageToDelete in messagesToDelete)
+        File.Delete(Path.Combine(mailboxFolder, messageToDelete));
+}
 ```
    
 ## Suggested exercises:
@@ -163,8 +182,18 @@ to know how big a message is and the default handler does it by reading the mess
 have a better way of finding the size of a message, you can provide your own handler that does this job better.
 
 (I would argue a well written POP3 client should only call `UIDL` to get the state of a mailbox instead of `STAT` or `LIST`, but this is where we're at.)
-
 ```
+/* Replace the default size-of-message handler with an optimized one. */
+pop3.Events.OnMessageSize = MyMessageSize;
+long MyMessageSize(string mailboxID, string messageUniqueID)
+{
+    /* Check mailbox ID. */
+    if (mailboxID != myMailboxID)
+        throw new ApplicationException("Invalid mailbox ID.");
+
+    /* Load the FileInfo object for the message and return the size. */
+    return new FileInfo(Path.Combine(mailboxFolder, messageUniqueID)).Length;
+}
 ```
     
 # "That call to Path.Combine looks dangerous!"
@@ -180,4 +209,5 @@ What this means is that your custom retrieval and deletion handlers are free to 
 IDs your code had already created first.
 
 # What now?
-I hope you enjoyed building your very own POP3 service using the POP3 Listener component. The above was a simple project to get you going. If you do encounter an issue or you have a question, please open an issue on the project’s github page.
+I hope you enjoyed building your very own POP3 service using the POP3 Listener component. The above was a simple project to get you going. If you do 
+encounter an issue or you have a question, please open an issue on the project’s github page.
