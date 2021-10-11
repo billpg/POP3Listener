@@ -91,25 +91,6 @@ namespace billpg.pop3
 
     public delegate void RaiseNewMessageEvent(string mailboxID);
 
-    public interface IPOP3EventNotification
-    {
-        void NewConnection(IPOP3ConnectionInfo info);
-        void ConnandReceived(IPOP3ConnectionInfo info, string command);
-        void Error(IPOP3ConnectionInfo info, Exception ex);
-        void CloseConnection(IPOP3ConnectionInfo info);
-    }
-
-    internal class NullEventNotification : IPOP3EventNotification
-    {
-        private NullEventNotification() { }
-        internal static NullEventNotification Singleton = new NullEventNotification();
-
-        void IPOP3EventNotification.CloseConnection(IPOP3ConnectionInfo info) { }
-        void IPOP3EventNotification.ConnandReceived(IPOP3ConnectionInfo info, string command) { }
-        void IPOP3EventNotification.Error(IPOP3ConnectionInfo info, Exception ex) { }
-        void IPOP3EventNotification.NewConnection(IPOP3ConnectionInfo info) { }
-    }
-
     public class POP3ResponseException: Exception
     {
         public string ResponseCode { get; }
@@ -147,7 +128,6 @@ namespace billpg.pop3
         string AuthMailboxID { get; }
         string UserNameAtLogin { get; }
         bool IsSecure { get; }
-        object ProviderTag { get; set; }
     }
 
     public interface IMessageContent

@@ -33,8 +33,6 @@ namespace billpg.pop3
 
         bool IPOP3ConnectionInfo.IsSecure => activeConnection.IsSecure;
 
-        object IPOP3ConnectionInfo.ProviderTag { get; set; }
-
         private bool IsUserLoginAllowed => (service.RequireSecureLogin == false || activeConnection.IsSecure || activeConnection.IsLocalHost);
 
         private static readonly IList<string> capabilities = new List<string>

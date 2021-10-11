@@ -99,7 +99,7 @@ namespace billpg.pop3
         private void MainInternal()
         {
             /* Notify the connection event. */
-            service.EventNotification.NewConnection(handler);
+            service.Events.OnNewConnection(handler);
 
             /* Pull out the stream handler. */
             this.stream = tcp.GetStream();
@@ -146,7 +146,7 @@ namespace billpg.pop3
                 catch (Exception ex)
                 {
                     /* Notify the error. */
-                    service.EventNotification.Error(handler, ex);
+                    service.Events.OnError(handler, ex);
 
                     /* Convert the caught exception to use as the response object. */
                     if (ex is POP3ResponseException rex)
@@ -167,7 +167,6 @@ namespace billpg.pop3
                 /* If this is a quit/critical response, stop now and allow the finally block to close the session. */
                 if (resp.IsQuit)
                 {
-                    service.EventNotification.CloseConnection(handler);
                     return;
                 }
             }
@@ -202,7 +201,7 @@ namespace billpg.pop3
                     {
                         /* Pull out command. */
                         string line = UTF8.GetString(readBuffer, readBufferStartIndex, offset);
-                        service.EventNotification.ConnandReceived(handler, line);
+                        service.Events.OnCommandReceived(handler, line);
 
                         /* Move buffer index along, command+terminator byte. */
                         int length = offset + 1;
