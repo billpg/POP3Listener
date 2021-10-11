@@ -32,75 +32,15 @@ If you'd like to be even more impressed, here's the description of the extension
 
 ````
 var listen = new billpg.pop3.POP3Listener();
-listen.Provider = /* Your provider object. */ ;
 listen.SecureCertificate = /* Your PFK. */ ;
 listen.ListenOn(IPAddress.Any, 110, false);
 listen.ListenOn(IPAddress.Any, 995, true);
 /* Service is now listening for incomming connections. */
 ````
 
-The provider object needs to implement the interface ```IPOP3MailboxProvider```. This object will handle login requests when they come in.
+This code snippet above will start a service that accepts secure (and insecure) POP3 connections. As it stands, it won't do anything useful as all of the default event handers are in place, but I've written a short introduction that walk through the process of writing a very simple POP3 service that reads email files from a folder on your computer. [Build Your Own POP3 Service.][5]
 
-If dry references don't grab you, I've written a short introduction that walk through the process of writing a very simple POP3 service that reads email files from a folder on your computer. [Write Your Own POP3 Service.][5]
-
-[5]: https://billpg.com/pop3-write-your-own/
-
-### IPOP3MailboxProvider
-
-The service will call through to this provider object to handle login requests.
-
-- ```Name```
-  - Returns the name of this provider object. Will be shown to clients in the connection banner.
-- ```Authenticate(info, username, password)```
-  - Passes a uername and password. Provider object should test the supplied credentials for validity and either return an object that implements the ```IPOP3Mailbox``` interface, or NULL to reject the login request.
-
-### IPOP3Mailbox
-
-The service will call through to this provider object to handle requsts to access the contents of messages.
-
-- ```ListMessageUniqueIDs(info)```
-  - Called when the service needs a "directory listing". The provider should return a collection of strings that identify the messages available to the user. 
-  - If the user's mailbox is empty, this function should return an empty collection.
-  - These identifiers will be shown to the user in response to a ```UIDL``` command. The strings must only use ASCII characters, not including control characters and space.
-- ```MessageExists(info, uniqueID)```
-  - Called to request if a message exists or not. 
-  - The sevice only calls this when the client requests a message that hasn't been identified before and allows the service to handle it.
-- ```MessageSize(info, uniqueID)```
-  - Called to request the size of the identified message in bytes.
-- ```MessageContent(info, uniqueID)```
-  - Called to request the contents of the identified message. 
-  - The response is in the form of an object that implements the ```IMessageContent``` interface.
-- ```MessageDelete(info, uniqueIDCollection)```
-  - Called to request that the listed messages are all to be deleted. 
-  - The provider should delete all of them (or otherwise put them beyond future retrieval) in an atomic operation.
-
-The provider code may throw an exception of type ```PopResponseException``` to cause the service to respond with an error to the client. This exception might have a "critical" flag that causes the connection to be shut down.
-
-If the provider code throws a ```NotImplementedException```, the service will pass an appropriate error to the client but keep the onnection open.
-
-### IMessageContent
-
-This interface allows the service to read a message's contents line-by-line, with an option to stop retrieval if the client used a TOP command.
-
-- ```NextLine()```
-  - Return the next line in the message.
-- ```Close()```
-  - Indicates the service has retrieved enough lines.   
-
-### IPOP3ConnectionInfo
-
-Many calls to the above interfaces from the service engine will supply an "info" object that implements this interface, providing some details about the crrent connection.
-
-- ```ClientIP```
-  - The source IP address of the current connection.
-- ```ConnectionID```
-  - The internal connection identifier used by the service.
-- ```UserNameAtLogin```
-  - The user name supplied by the user on login.
-- ```IsSecure```
-  - Returns a flag indicating if the underlying connection is secured by TLS.
-- ```ProviderTag```
-  - A settable object reference your code can use that will remain attached to this connection. The service will ignore it.  
+[5]: https://github.com/billpg/POP3Listener/blob/main/BuildYourOwnPOP3Server.md
 
 ## Does it work on Linux?
 
