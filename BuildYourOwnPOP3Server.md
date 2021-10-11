@@ -5,8 +5,8 @@ as a mailbox and serves them to anyone logging in.
 I’m assuming you are already set-up to be writing and building C# code. If you have Windows, the free version of Visual Studio 2019 is great.
 (Or use a more recent version if one exists.) Visual Studio Code is great on Linux too.
 
-Download and build billpg industries POP3 Listener. Open up a new console app project and include the billpg,POP3Listener.dll file as a reference.
-You’ll find the code for this project on the same github in its own folder.
+Download and build **billpg industries POP3 Listener**. Open up a new console app project and include the `billpg,POP3Listener.dll` file as a reference.
+If you prefer, [the code for this project is in one piece on this github](https://github.com/billpg/POP3Listener/blob/main/BuildYourOwnPop3Service/Program.cs) .
 
 ```
 using System;
