@@ -4,7 +4,7 @@ A POP3 Listener for dot-net.
 
 ## What is it?
 
-A component of a POP3 service. Like ```TcpListener``` and ```HttpListener```, this component's job is to listen for incomming connections and to talk the protocol with clients. When the time comes to authenticate users or download messages, the library will call through to a "provider" object that you write. This way, the listener code deals with the blah-blah-blah of commands and responses while your code is left with the important tasks.
+A component of a POP3 service. Like ```TcpListener``` and ```HttpListener```, this component's job is to listen for incomming connections and to talk the protocol with clients. When the time comes to authenticate users or download messages, the library will call through to event handlers that you write. This way, the listener code deals with the blah-blah-blah of commands and responses while your code is left with the important tasks.
 
 ## But why?
 
