@@ -66,8 +66,8 @@ will pass this mailbox ID along to identify which mailbox the user is interactin
 is fine except NULL. It could be a copy of the supplied username, a stringified primary key value, anything as long as the value is consistent.
 
 ## Suggested exercise:
-- Create a table of usernames and hashed passwords. (Database table, text file, up to you.)
-- Write an authentication function that queries this table.
+- Can you get a real mail reader like Thunderbird to connect to your server?
+- Create a table of usernames and hashed passwords and write an authentication function that queries this table. (Database table, text file, up to you.)
 
 # Mailbox Contents.
 With an authentication function, we can now log-in to our mailbox, but the mailbox is empty. This is because the default message-list handler only ever responds 
@@ -104,6 +104,8 @@ Subject: We are the Rutabagas of New York!
 Hello my lovely family!
 ```
 
+(Warning, your file names cant have spaces as the POP3 protocol does not allow spaces in response to a UIDL command. If your file is called `"New Text Document.txt"` the service will complain if your code expects it to use that as a message's Unique ID.)
+
 Because we've not written a way to retrieve the message contents yet, POP3 commands `STAT` and `LIST` won't work but `UIDL` will. (We'll see why later.)
 
 If you're interacting with the server by typing commands directtly, send a `UIDL` command and you'll see a brief "folder listing" come back. The server has
@@ -111,8 +113,8 @@ identified each file in your mailbox folder and is presenting the file-names as 
 for now.
 
 ## Suggested exercise:
-- Add a folder field to username/password table.
-- Return a list of files for the authenticated mailbox by returning that user's mailbox folder's contents.
+- Add a folder field to username/password table and return a list of files for the user's mailbox folder's contents.
+- Automatically work-around any file names with spaces or any non-ASCII characters.
 
 # Message Retrieval
 As discussed earlier, we can't do much with a mailbox listing without a way to retrieve that message. Again, this is a new handler you can set. The default
@@ -195,7 +197,10 @@ long MyMessageSize(string mailboxID, string messageUniqueID)
     return new FileInfo(Path.Combine(mailboxFolder, messageUniqueID)).Length;
 }
 ```
-    
+
+## Suggested Exercises:
+- I've long suspected that POP3 clients don't *need* an accurate message size, using it only to show a progress bar. What happens if your message-size function returns a fixed too-low or too-high value instead of returning the real size?
+
 # "That call to Path.Combine looks dangerous!"
 It does, well done for spotting it, but don't panic.
 
@@ -211,3 +216,7 @@ IDs your code had already created first.
 # What now?
 I hope you enjoyed building your very own POP3 service using the POP3 Listener component. The above was a simple project to get you going. If you do 
 encounter an issue or you have a question, please open an issue on the project’s github page.
+
+## Suggested Exercises:
+- Can you get TLS to work with a self-signed certificate? The listener object has place for you to pass in a loaded PFK file.
+- There are other `On...` handlers inside the `Events` object. Experiment with writing handlers for them.
