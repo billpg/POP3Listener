@@ -51,46 +51,14 @@ namespace billpg.pop3
         {
             /* Create new listener. */
             TcpListener listen = new TcpListener(addr, port);
-            listen.Start();
+            listen.StartListen(OnNewConnection);
 
             /* Store in collection. */
             lock (this.mutex)
                 this.listeners.Add(listen);
 
-            /* Set up a one-shot listening event. */
-            BeginListen();
-
-            /* Launch a one-shot listen. */
-            void BeginListen()
-            {
-                TryBeginEnd(BeginListenInternal);
-                int BeginListenInternal()
-                {
-                    /* Call the listener object to start listening and to call this call-back.
-                     * (We can ignore the IAR returneed here because the call-back will have it. */
-                    listen.BeginAcceptTcpClient(OnConnectInternal, null);
-                    return 0;
-                }
-            }
-
-            /* Function called from BeginAcceptTcpClient when a new client is accepted. */
-            void OnConnectInternal(IAsyncResult iar) 
-            {
-                /* Nothing to do if the listener has been stopped. */
-                if (listen.Server == null || listen.Server.IsBound == false)
-                    return;
-
-                /* Start listening again. This will call BeginAcceptTcpClient again, 
-                 * passing in this function as the call-back. */
-                BeginListen();
-
-                /* Complete the incoming conection. */
-                var tcp = TryBeginEnd(EndListenInternal);
-                TcpClient EndListenInternal()
-                    => listen.EndAcceptTcpClient(iar);
-
-                /* Only continue if there is an incomming connection. */
-                if (tcp != null)
+            /* Function called by TcpListener when a new incomming connection is made. */
+            void OnNewConnection(TcpClient tcp)
                 {
                     /* Start a new connection at the POP3 level. */
                     var pop3 = SingleConnectionWorker.Start(tcp, immediateTls, this);
@@ -99,28 +67,6 @@ namespace billpg.pop3
                     lock (this.mutex)
                         this.connections.Add(pop3);
                 }
-            }
-
-            /* Call Begin/End ,cathcing and ignoring known exceptions that occurr on shutdown. */
-            T TryBeginEnd<T>(Func<T> fn)
-            {
-                try
-                {
-                    /* Cal the supplied function and pass along the result. */
-                    return fn();
-                }
-
-                /* Ignore these two exceptions, known to be thrown during socket shutdown. */
-                catch (ObjectDisposedException ex)
-                when (ex.ObjectName == "System.Net.Sockets.Socket")
-                { }
-                catch (InvalidOperationException ex)
-                when (ex.Message.Contains("Start()"))
-                { }
-
-                /* Return null, indicating the action was unsuccessful. */
-                return default;
-            }
         }
 
         public void Stop()
