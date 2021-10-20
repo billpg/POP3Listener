@@ -101,5 +101,44 @@ namespace billpg.pop3.Tests
             return certificate.ThumbprintSHA256Base64() == selfSigned.ThumbprintSHA256Base64();
         }
     }
+
+    internal static class UnittestExtensions
+    {
+        private static readonly Random rnd = new Random();
+
+        internal static IEnumerable<T> Shuffle<T>(this IEnumerable<T> src)
+        {
+            var items = src.ToList();
+            while (items.Any())
+            {
+                int itemIndex;
+                lock (rnd)
+                    itemIndex = rnd.Next(items.Count);
+                yield return items[itemIndex];
+                items.RemoveAt(itemIndex);
+            }
+        }
+
+        internal static string ReadLine(this System.Net.Sockets.NetworkStream str)
+        {
+            var line = new List<byte>();
+            while (true)
+            {
+                int byteIn = str.ReadByte();
+
+                if (byteIn != 13 && byteIn != 10)
+                    line.Add((byte)byteIn);
+
+                if (byteIn == 13)
+                    return Encoding.ASCII.GetString(line.ToArray());
+            }
+        }
+
+        internal static void WriteLine(this System.Net.Sockets.NetworkStream str, string line)
+        {
+            var buffer = Encoding.ASCII.GetBytes(line + "\r\n");
+            str.Write(buffer, 0, buffer.Length);
+        }
+    }
 }
 
