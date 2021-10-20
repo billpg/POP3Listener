@@ -384,7 +384,7 @@ namespace billpg.pop3
             {
                 /* Add the unique-id to the list of flags and return success. */
                 deletedUniqueIDs.Add(uniqueID);
-                return PopResponse.OKSingle($"Message UID:{uniqueID} flagged for delete on QUIT, SLEE or CORE.");
+                return PopResponse.OKSingle($"Message UID:{uniqueID} flagged for delete on QUIT or SLEE.");
             }
         }
 

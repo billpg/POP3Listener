@@ -161,7 +161,7 @@ namespace billpg.pop3.Tests
                             {
                                 WriteLine(str, "DELE UID:" + selectedDele);
                                 var deleResp = ReadLine(str);
-                                Assert.AreEqual($"+OK Message UID:{selectedDele} flagged for delete on QUIT, SLEE or CORE.", deleResp);
+                                Assert.AreEqual($"+OK Message UID:{selectedDele} flagged for delete on QUIT or SLEE.", deleResp);
                             }
 
                             /* Go to sleep. */
@@ -457,7 +457,7 @@ namespace billpg.pop3.Tests
                                 {
                                     WriteLine(str, "DELE UID:" + deleteID);
                                     var deleResp = ReadLine(str);
-                                    Assert.AreEqual($"+OK Message UID:{deleteID} flagged for delete on QUIT, SLEE or CORE.", deleResp);
+                                    Assert.AreEqual($"+OK Message UID:{deleteID} flagged for delete on QUIT or SLEE.", deleResp);
                                     expectedDeletedByServer++;
                                 }
                             }
@@ -611,13 +611,13 @@ namespace billpg.pop3.Tests
                 /* Delete the message without a message id? */
                 WriteLine(str, $"DELE UID:{uniqueIDNew}");
                 var deleOneResp = ReadLine(str);
-                Assert.AreEqual($"+OK Message UID:{uniqueIDNew} flagged for delete on QUIT, SLEE or CORE.", deleOneResp);
+                Assert.AreEqual($"+OK Message UID:{uniqueIDNew} flagged for delete on QUIT or SLEE.", deleOneResp);
 
                 /* Delete a normal message too. */
                 string normalUniqueIdToDelete = prov.uniqueIdsInMailbox[84];
                 WriteLine(str, $"DELE UID:{normalUniqueIdToDelete}");
                 var deleTwoResp = ReadLine(str);
-                Assert.AreEqual($"+OK Message UID:{normalUniqueIdToDelete} flagged for delete on QUIT, SLEE or CORE.", deleTwoResp);
+                Assert.AreEqual($"+OK Message UID:{normalUniqueIdToDelete} flagged for delete on QUIT or SLEE.", deleTwoResp);
 
                 /* Check the two selected uniqueIDs are still there. */
                 Assert.IsTrue(prov.uniqueIdsInMailbox.Contains(uniqueIDNew));
