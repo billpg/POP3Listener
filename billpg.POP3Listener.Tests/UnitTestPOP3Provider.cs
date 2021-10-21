@@ -5,6 +5,7 @@
 using billpg.pop3;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
@@ -135,8 +136,11 @@ namespace billpg.pop3.Tests
         }
 
         internal static void WriteLine(this System.Net.Sockets.NetworkStream str, string line)
+            => str.WriteString(line + "\r\n");
+
+        internal static void WriteString(this Stream str, string value)
         {
-            var buffer = Encoding.ASCII.GetBytes(line + "\r\n");
+            var buffer = Encoding.ASCII.GetBytes(value);
             str.Write(buffer, 0, buffer.Length);
         }
     }

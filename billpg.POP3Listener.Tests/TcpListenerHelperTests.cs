@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using billpg.pop3;
 using System.Threading;
+using System.IO.Pipes;
 
 namespace billpg.pop3.Tests
 {
@@ -119,10 +120,6 @@ namespace billpg.pop3.Tests
             foreach (NetworkStream str in clients)
             {
                 int readByte = str.ReadByte();
-                if (str.Socket.Connected)
-                {
-
-                }
                 Assert.AreEqual(-1, readByte);
             }
 
@@ -133,6 +130,90 @@ namespace billpg.pop3.Tests
                 Assert.AreEqual(0, activeNowCount);
                 Assert.IsTrue(maxActiveNowCount > connectionCount/2);
             }
+        }
+
+        [TestMethod]
+        public void TestPipeServer_Sync()
+        {
+            using var server = new System.IO.Pipes.AnonymousPipeServerStream();
+            using var client = new AnonymousPipeClientStream(server.GetClientHandleAsString());
+            server.WriteString("Rutabaga");
+            Assert.AreEqual((byte)'R', client.ReadByte());
+            Assert.AreEqual((byte)'u', client.ReadByte());
+            Assert.AreEqual((byte)'t', client.ReadByte());
+            Assert.AreEqual((byte)'a', client.ReadByte());
+            Assert.AreEqual((byte)'b', client.ReadByte());
+            Assert.AreEqual((byte)'a', client.ReadByte());
+            Assert.AreEqual((byte)'g', client.ReadByte());
+            Assert.AreEqual((byte)'a', client.ReadByte());
+        }
+
+        [TestMethod]
+        public void TestPipeServer_Async()
+        {
+            using var server = new System.IO.Pipes.AnonymousPipeServerStream();
+            using var client = new AnonymousPipeClientStream(server.GetClientHandleAsString());
+            using var signal = new ManualResetEvent(false);
+            server.WriteString("Rutabaga");
+
+            byte[] buffer = new byte[10];
+            int bytesIn = -1;
+            client.BeginRead(buffer, 0, 10, TestCallback, null);
+            void TestCallback(IAsyncResult iar)
+            {
+                bytesIn = client.EndRead(iar);
+                signal.Set();                
+            }
+
+            signal.WaitOne();
+
+            Assert.AreEqual(8, bytesIn);
+            Assert.AreEqual("Rutabaga\0\0", Encoding.ASCII.GetString(buffer));
+
+        }
+
+        [TestMethod]
+        public void TcpLineHelper_ReadLine()
+        {
+            using var signal = new AutoResetEvent(false);
+
+            /* Start collecting lines. */
+            StringBuilder lines = new StringBuilder();
+            void AddLine(byte[] line)
+            {
+                lock (lines)
+                {
+                    lines.Append(Encoding.ASCII.GetString(line) + "[EOL]");
+                    signal.Set();
+                }
+            }
+            string GetLines()
+            {
+                lock (lines)
+                {
+                    string value = lines.ToString();
+                    lines.Clear();
+                    return value;
+                }
+            }
+
+            /* Open streams to stand in as network streams. */
+            using var server = new System.IO.Pipes.AnonymousPipeServerStream();
+            using var client = new AnonymousPipeClientStream(server.GetClientHandleAsString());
+
+            /* Set up line reader. Should not (yet) have called back. */
+            var helper = new StreamLineHelper(client);
+            helper.ReadLineCall(AddLine);
+            Assert.AreEqual("", GetLines());
+
+            /* Send some text, but no end-of line. */
+            server.WriteString("Rutabaga");
+            Assert.AreEqual("", GetLines());
+
+            /* Send just a CR. */
+            server.WriteString("\r\n");
+            signal.WaitOne();
+            Assert.AreEqual("Rutabaga[EOL]", GetLines());
         }
     }
 }

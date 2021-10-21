@@ -840,17 +840,6 @@ namespace billpg.pop3.Tests
             byte[] lineAsBytes = Encoding.ASCII.GetBytes(line + "\r\n");
             str.Write(lineAsBytes, 0, lineAsBytes.Length);
         }
-
-
-    }
-
-    internal static class StreamExtensions
-    {
-        internal static void WriteString(this Stream str, string pkg)
-        {
-            byte[] pkgAsBytes = Pop3ListenerTestsBySocket.UTF8.GetBytes(pkg);
-            str.Write(pkgAsBytes, 0, pkgAsBytes.Length);
-        }
     }
 }
 
