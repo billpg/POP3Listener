@@ -19,9 +19,7 @@ namespace billpg.pop3
         private readonly bool immediateTls;
         private readonly POP3Listener service;
         internal readonly CommandHandler handler;
-        private readonly Thread worker;
         internal readonly long connectionID;
-        internal readonly AutoResetEvent waitEvent;
 
         private const byte CR = (byte)'\r';
         private const byte LF = (byte)'\n';
@@ -40,9 +38,7 @@ namespace billpg.pop3
             this.immediateTls = immediateTls;
             this.service = service;
             this.handler = new CommandHandler(this, service);
-            this.worker = new Thread(WorkerMain);
             this.connectionID = POP3Listener.GenConnectionID();
-            this.waitEvent = new AutoResetEvent(false);
             this.readBuffer = new byte[10000];
             this.readBufferStartIndex = 0;
             this.readBufferUsedCount = 0;
@@ -70,14 +66,7 @@ namespace billpg.pop3
 
         public bool IsSecure => stream is SslStream;
 
-        internal static SingleConnectionWorker Start(TcpClient tcp, bool immediateTls, POP3Listener service)
-        {
-            SingleConnectionWorker con = new SingleConnectionWorker(tcp, immediateTls, service);
-            con.worker.Start();
-            return con;
-        }
-
-        private void WorkerMain()
+        internal void WorkerMain()
         {
             try
             {
@@ -90,7 +79,6 @@ namespace billpg.pop3
             }
             finally
             {
-                this.waitEvent.Dispose();
                 this.stream.Dispose();
                 this.tcp.Close();
             }
@@ -174,7 +162,8 @@ namespace billpg.pop3
 
         internal void WaitForStop()
         {
-            worker.Join();
+            /* Close the underlying socket. */
+            this.tcp.Close();
         }
 
         private void WaitReadCommand(out string command, out string pars)

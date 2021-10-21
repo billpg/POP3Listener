@@ -61,11 +61,14 @@ namespace billpg.pop3
             void OnNewConnection(TcpClient tcp)
                 {
                     /* Start a new connection at the POP3 level. */
-                    var pop3 = SingleConnectionWorker.Start(tcp, immediateTls, this);
+                    var worker = new SingleConnectionWorker(tcp, immediateTls, this);
 
                     /* Store in the list. */
                     lock (this.mutex)
-                        this.connections.Add(pop3);
+                        this.connections.Add(worker);
+
+                    /* Hand over control to worker. */
+                    worker.WorkerMain();
                 }
         }
 
