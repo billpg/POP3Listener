@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -170,6 +170,24 @@ namespace billpg.pop3.Tests
             Assert.AreEqual(8, bytesIn);
             Assert.AreEqual("Rutabaga\0\0", Encoding.ASCII.GetString(buffer));
 
+        }
+
+        [TestMethod]
+        public void UnitTestNetworkStream_Test()
+        {
+            UnitTestNetworkStream.Create(out var client, out var server);
+            try
+            {
+                client.WriteLine("Rutabaga");
+                Assert.AreEqual("Rutabaga", server.ReadLine());
+                server.WriteLine("Carrots");
+                Assert.AreEqual("Carrots", client.ReadLine());
+            }
+            finally
+            {
+                client.Close();
+                server.Close();
+            }
         }
 
         [TestMethod]
