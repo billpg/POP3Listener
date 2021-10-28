@@ -191,47 +191,71 @@ namespace billpg.pop3.Tests
         }
 
         [TestMethod]
-        public void TcpLineHelper_ReadLine()
+        public void StreamLineReader_Test()
         {
+            /* Falgh to be raised when the test is complete. */
             using var signal = new AutoResetEvent(false);
 
             /* Start collecting lines. */
             StringBuilder lines = new StringBuilder();
-            void AddLine(byte[] line)
+            void OnAddLine(StreamLineReader.Line line)
             {
                 lock (lines)
                 {
-                    lines.Append(Encoding.ASCII.GetString(line) + "[EOL]");
-                    signal.Set();
-                }
-            }
-            string GetLines()
-            {
-                lock (lines)
-                {
-                    string value = lines.ToString();
-                    lines.Clear();
-                    return value;
+                    lines.Append(line.AsASCII + (line.IsCompleteLine ? "[EOL]" : "[MAX]"));
                 }
             }
 
-            /* Open streams to stand in as network streams. */
-            using var server = new System.IO.Pipes.AnonymousPipeServerStream();
-            using var client = new AnonymousPipeClientStream(server.GetClientHandleAsString());
+            void OnCloseStream()
+            {
+                lock (lines)
+                    lines.Append("[CLOSE]");
+                signal.Set();
+            }
+
+            /* Open network streams. */
+            UnitTestNetworkStream.Create(out var readStream, out var writeStream);
 
             /* Set up line reader. Should not (yet) have called back. */
-            var helper = new StreamLineHelper(client);
-            helper.ReadLineCall(AddLine);
-            Assert.AreEqual("", GetLines());
+            var helper = new StreamLineReader(readStream, 10, OnAddLine, OnCloseStream);
+            helper.Start();
 
             /* Send some text, but no end-of line. */
-            server.WriteString("Rutabaga");
-            Assert.AreEqual("", GetLines());
+            writeStream.WriteString("Rutabaga");
+            /* Send just a CR, wait for the line-read signal and check the line. */
+            writeStream.WriteString("\r\n");
 
-            /* Send just a CR. */
-            server.WriteString("\r\n");
+            /* Send a line with just the CR, then the missing LF. */
+            writeStream.WriteString("Carrot\r");
+            Thread.Sleep(100);
+            writeStream.WriteString("\n");
+
+            /* Send too much for a ten byte buffer. */
+            writeStream.WriteString("Fuzzy llama. Funny llama. Llama llama duck.\r\n");
+            writeStream.Flush();
+
+            /* Send several lines. */
+            writeStream.WriteString("A\rB\nC\r\nD\n\r");
+
+            /* Send an unterminated line and close the stream. */
+            writeStream.WriteString("Last");
+            writeStream.Close();
+
             signal.WaitOne();
-            Assert.AreEqual("Rutabaga[EOL]", GetLines());
+
+            /* Check the results. */
+            Assert.AreEqual(
+                "Rutabaga[EOL]" +
+                "Carrot[EOL]" +
+                "Fuzzy llam[MAX]" +
+                "a. Funny l[MAX]" +
+                "lama. Llam[MAX]" +
+                "a llama du[MAX]" +
+                "ck.[EOL]" +
+                "A[EOL]B[EOL]C[EOL]D[EOL][EOL]" +
+                "Last[EOL]" +
+                "[CLOSE]", 
+                lines.ToString());
         }
     }
 }
