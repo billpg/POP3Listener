@@ -193,7 +193,7 @@ namespace billpg.pop3.Tests
         [TestMethod]
         public void StreamLineReader_Test()
         {
-            /* Falgh to be raised when the test is complete. */
+            /* Flag to be raised when the test is complete. */
             using var signal = new AutoResetEvent(false);
 
             /* Start collecting lines. */
@@ -256,6 +256,47 @@ namespace billpg.pop3.Tests
                 "Last[EOL]" +
                 "[CLOSE]", 
                 lines.ToString());
+        }
+
+        [TestMethod]
+        public void StreamLineReader_CloseStream_Write()
+            => StreamLineReader_CloseStream(false);
+
+        [TestMethod]
+        public void StreamLineReader_CloseStream_Read()
+            => StreamLineReader_CloseStream(true);
+
+        private void StreamLineReader_CloseStream(bool closeReadStream)
+        {
+            /* Flag to be raised when the test is complete. */
+            using var signal = new AutoResetEvent(false);
+
+            /* Function called when a line is read, but should never be called. */
+            bool onAddLineCalled = false;
+            void OnAddLine(StreamLineReader.Line line)
+                => onAddLineCalled = true;
+
+            /* Function called when a stread is closed. */
+            void OnCloseStream()
+                => signal.Set();
+
+            /* Open network streams. */
+            UnitTestNetworkStream.Create(out var readStream, out var writeStream);            
+
+            /* Start line reader. */
+            StreamLineReader.Start(readStream, 10, OnAddLine, OnCloseStream);
+
+            /* Close one of the streams. */
+            if (closeReadStream)
+                readStream.Close();
+            else
+                writeStream.Close();
+
+            /* Wait for the signal to reach the service. */
+            signal.WaitOne();
+
+            /* Check add-line was never called. */
+            Assert.IsFalse(onAddLineCalled);
         }
     }
 }

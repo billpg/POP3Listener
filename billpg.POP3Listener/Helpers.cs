@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -6,6 +6,9 @@ namespace billpg.pop3
 {
     internal static class Helpers
     {
+        private static readonly HashSet<string> allowedDisposedObjectNames
+            = new HashSet<string> { "System.Net.Sockets.Socket", "System.Net.Sockets.NetworkStream" };
+
         /// <summary>
         /// Call a supplied async function, catching and ignoring known exceptions that occur on shutdown.
         /// </summary>
@@ -21,7 +24,7 @@ namespace billpg.pop3
             /* Ignore these two exceptions, known to be thrown during socket shutdown.
              * Other exceptions are allowed to fall to the caller. */
             catch (ObjectDisposedException ex)
-            when (ex.ObjectName == "System.Net.Sockets.Socket")
+            when (allowedDisposedObjectNames.Contains(ex.ObjectName))
             { }
             catch (InvalidOperationException ex)
             when (ex.Message.Contains("Start()"))
