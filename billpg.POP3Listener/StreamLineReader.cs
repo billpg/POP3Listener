@@ -10,38 +10,10 @@ using System.Text;
 
 namespace billpg.pop3
 {
-    public class StreamLineReader
+    public static class StreamLineReader
     {
-        public StreamLineReader(Stream stream, int bufferSize, OnReadLineDelegate onReadLine, OnCloseStreamDelegate onCloseStream)
-        {
-            this.mutex = new object();
-            this.started = false;
-            this.Stream = stream;
-            this.nextLineSequence = 0;
-            this.buffer = new byte[bufferSize];
-            this.startIndex = 0;
-            this.usedLength = 0;
-            this.onReadLine = onReadLine;
-            this.onCloseStream = onCloseStream;
-        }
-
-        private readonly object mutex;
-        private bool started;
-        public Stream Stream { get; }
-        private long nextLineSequence;
-        private readonly byte[] buffer;
-        private int startIndex;
-        private int usedLength;
-        private bool expectLF;
-        private int availIndex => startIndex + usedLength;
-        private int availLength => buffer.Length - availIndex;
-        public bool IsEmpty => usedLength == 0;
-        private const byte CR = 13;
-        private const byte LF = 10;
         public delegate void OnReadLineDelegate(Line line);
-        private OnReadLineDelegate onReadLine;
         public delegate void OnCloseStreamDelegate();
-        private OnCloseStreamDelegate onCloseStream;
 
         [System.Diagnostics.DebuggerDisplay("{AsASCII}")]
         public class Line
@@ -60,148 +32,166 @@ namespace billpg.pop3
             }        
         }
 
-        public void Start()
+        public static void Start(Stream stream, int bufferSize, OnReadLineDelegate onReadLine, OnCloseStreamDelegate onCloseStream)
         {
-            lock (mutex)
+            /* Mutex protecting threads from each other. */
+            object mutex = new object();
+
+            /* The next line sequence value, starting from zero. */
+            long nextLineSequence = 0;
+
+            /* The buffer with indexes and derivatives. */
+            byte[] buffer = new byte[bufferSize];
+            int startIndex = 0;
+            int usedLength = 0;
+            int availIndex() => startIndex + usedLength;
+            int availLength() => buffer.Length - availIndex();
+
+            /* Flag raised if a buffer ends with CR, an LF might be next. */
+            bool expectLF = true;
+
+            /* Handy constants. */
+            const byte CR = 13;
+            const byte LF = 10;
+
+            /* Call BeginRead for the first time. */
+            InvokeBeginRead();
+
+            /* Calls BeginRead with the right parameters. */
+            void InvokeBeginRead()
             {
-                /* Aleady started? */
-                if (this.started)
-                    throw new ApplicationException("Already started StreamLineReader.");
-
-                /* Call BeginRead for the first time. */
-                InvokeBeginRead();
-
-                /* Raise started flag. */
-                this.started = true;
+                /* Invoke the reader and call the private call-back when ready. */
+                Helpers.TryCallCatch(BeginReadInternal);
+                void BeginReadInternal()
+                    => stream.BeginRead(buffer, availIndex(), availLength(), ReadCallBack, null);
             }
-        }
 
-        private void InvokeBeginRead()
-        {
-            /* Invoke the reader and call the private call-back when ready. */
-            this.Stream.BeginRead(buffer, availIndex, availLength, ReadCallBack, null);
-        }
-
-        private void ReadCallBack(IAsyncResult iar)
-        {
-            /* Wait for other threads to conclude while it works. */
-            lock (mutex)
+            /* Called when BeginRead finishes from a new thread or from inside BeginRead. */
+            void ReadCallBack(IAsyncResult iar)
             {
-                /* Complete the read operation. */
-                int newByteCount =  this.Stream.EndRead(iar);
-                
-                /* Closed stream? */
-                if (newByteCount == 0)
+                /* Wait for other threads to conclude while it works. */
+                lock (mutex)
                 {
-                    /* Handle any bytes without an end-of-line. */
-                    if (usedLength > 0)
+                    /* Complete the read operation. */
+                    int newByteCount = 0;
+                    Helpers.TryCallCatch(EndReadInternal);
+                    void EndReadInternal()
+                        => newByteCount = stream.EndRead(iar);
+
+                    /* Closed stream? */
+                    if (newByteCount == 0)
                     {
-                        byte[] lastLine = ExtractBytes(buffer, startIndex, usedLength);
-                        CallOnReadLine(lastLine, true);
-                    }
-
-                    this.onCloseStream();
-                    return;
-                }
-
-                /* Extend the used portion of the buffer by updating for the new bytes added. */
-                usedLength += newByteCount;
-
-                /* If there's at least one byte in the buffer and we're expecting an LF... */
-                if (expectLF && usedLength > 0)
-                {
-                    /* Is it an LF? */
-                    if (buffer[startIndex] == LF)
-                    {
-                        /* Consume the LF silently. */
-                        startIndex += 1;
-                        usedLength -= 1;
-                    }
-
-                    /* Either way, we're not expecting an LF any more. */
-                    expectLF = false;
-                }
-
-                /* Look for a CR or LF. */
-                int scanIndex = startIndex;
-                while (scanIndex < availIndex)
-                {
-                    /* This is one? */
-                    byte atOffset = buffer[scanIndex];
-                    if (atOffset == CR || atOffset == LF)
-                    {
-                        /* Copy the bytes out. */
-                        int lineByteCount = scanIndex - startIndex;
-                        byte[] line = ExtractBytes(buffer, startIndex, lineByteCount);
-
-                        /* Update the indexes, including the CR or LF. */
-                        int lineByteCountIncludingEndOfLine = lineByteCount + 1;
-                        startIndex += lineByteCountIncludingEndOfLine;
-                        usedLength -= lineByteCountIncludingEndOfLine;
-
-                        /* Is the end-of-line a CR? */
-                        if (atOffset == CR)
+                        /* Any bytes left in the buffer have an implicit end-of-line. */
+                        if (usedLength > 0)
                         {
-                            /* Is there an LF waiting? */
-                            if (usedLength > 0 && buffer[startIndex] == LF)
-                            {
-                                /* Consume the LF too. */
-                                startIndex += 1;
-                                usedLength -= 1;
-
-                                /* Move the scan past the LF. */
-                                scanIndex += 1;
-                            }
-
-                            /* If the CR was the last byte, expect an LF next buffer. */
-                            else if (usedLength == 0)
-                            {
-                                expectLF = true;
-                            }
+                            byte[] lastLine = ExtractBytes(buffer, startIndex, usedLength);
+                            CallOnReadLine(lastLine, true);
                         }
 
-                        /* Call the call-back. */
-                        CallOnReadLine(line, true);
+                        /* Call-back to caller than the stream has finished. */
+                        onCloseStream();
+                        return;
                     }
 
-                    /* Move scan index along. */
-                    scanIndex++;
-                } /* Next byte. */
+                    /* Extend the used portion of the buffer by updating for the new bytes added. */
+                    usedLength += newByteCount;
 
-                /* If the buffer is empty, move the counter to the start. */
-                if (usedLength == 0)
-                    startIndex = 0;
+                    /* If there's at least one byte in the buffer and we're expecting an LF... */
+                    if (expectLF && usedLength > 0)
+                    {
+                        /* Is it an LF? */
+                        if (buffer[startIndex] == LF)
+                        {
+                            /* Consume the LF silently. */
+                            startIndex += 1;
+                            usedLength -= 1;
+                        }
 
-                /* If there is no available space, shift the buffer back to the start. */
-                if (availLength == 0 && startIndex > 0)
-                {
-                    /* Only move if there are bytes in the buffer. */
-                    if (usedLength > 0)
-                        Buffer.BlockCopy(buffer, startIndex, buffer, 0, usedLength);
+                        /* Either way, we're not expecting an LF any more. */
+                        expectLF = false;
+                    }
 
-                    /* Reset the start index nonetheless. */
-                    startIndex = 0;
-                }
+                    /* Look for a CR or LF. */
+                    int scanIndex = startIndex;
+                    while (scanIndex < availIndex())
+                    {
+                        /* This is one? */
+                        byte atOffset = buffer[scanIndex];
+                        if (atOffset == CR || atOffset == LF)
+                        {
+                            /* Copy the bytes out. */
+                            int lineByteCount = scanIndex - startIndex;
+                            byte[] line = ExtractBytes(buffer, startIndex, lineByteCount);
 
-                /* If the buffer is maxed out, return the filled buffer as a single line. */
-                if (startIndex == 0 && availLength == 0)
-                {
-                    /* Copy the buffer and send to caller's callback. */
-                    CallOnReadLine(buffer.ToArray(), false);
+                            /* Update the indexes, including the CR or LF. */
+                            int lineByteCountIncludingEndOfLine = lineByteCount + 1;
+                            startIndex += lineByteCountIncludingEndOfLine;
+                            usedLength -= lineByteCountIncludingEndOfLine;
 
-                    /* Update counters ready for beginRead. */
-                    startIndex = 0;
-                    usedLength = 0;
-                }
+                            /* Is the end-of-line a CR? */
+                            if (atOffset == CR)
+                            {
+                                /* Is there an LF waiting? */
+                                if (usedLength > 0 && buffer[startIndex] == LF)
+                                {
+                                    /* Consume the LF too. */
+                                    startIndex += 1;
+                                    usedLength -= 1;
 
-                /* Read the next line. */
-                InvokeBeginRead();
+                                    /* Move the scan past the LF. */
+                                    scanIndex += 1;
+                                }
 
-                /* Helper function to call the onReadLine event. */
-                void CallOnReadLine(byte[] line, bool isCompleteLine)
-                    => this.onReadLine(new Line(line, nextLineSequence++, isCompleteLine));
-                
-            } /* Release mutex. */
+                                /* If the CR was the last byte, expect an LF next buffer. */
+                                else if (usedLength == 0)
+                                {
+                                    expectLF = true;
+                                }
+                            }
+
+                            /* Call the call-back. */
+                            CallOnReadLine(line, true);
+                        }
+
+                        /* Move scan index along. */
+                        scanIndex++;
+                    } /* Next byte. */
+
+                    /* If the buffer is empty, move the counter to the start. */
+                    if (usedLength == 0)
+                        startIndex = 0;
+
+                    /* If there is no available space, shift the buffer back to the start. */
+                    if (availLength() == 0 && startIndex > 0)
+                    {
+                        /* Only move if there are bytes in the buffer. */
+                        if (usedLength > 0)
+                            Buffer.BlockCopy(buffer, startIndex, buffer, 0, usedLength);
+
+                        /* Reset the start index nonetheless. */
+                        startIndex = 0;
+                    }
+
+                    /* If the buffer is maxed out, return the filled buffer as a single line. */
+                    if (startIndex == 0 && availLength() == 0)
+                    {
+                        /* Copy the buffer and send to caller's callback. */
+                        CallOnReadLine(buffer.ToArray(), false);
+
+                        /* Update counters ready for beginRead. */
+                        startIndex = 0;
+                        usedLength = 0;
+                    }
+
+                    /* Read the next line. */
+                    InvokeBeginRead();
+
+                    /* Helper function to call the onReadLine event. */
+                    void CallOnReadLine(byte[] line, bool isCompleteLine)
+                        => onReadLine(new Line(line, nextLineSequence++, isCompleteLine));
+
+                } /* Release mutex. */
+            }
         }
 
         private static byte[] ExtractBytes(byte[] from, int startIndex, int length)

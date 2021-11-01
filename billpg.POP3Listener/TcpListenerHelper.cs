@@ -1,4 +1,4 @@
-﻿/* billpg industries POP3 Listener. */
+/* billpg industries POP3 Listener. */
 /* Copyright, William Godfrey 2021. All Rights Reserved. */
 /* https://billpg.com/POP3/ */
 
@@ -40,7 +40,7 @@ namespace billpg.pop3
             void BeginListen()
             {
                 /* Call BeginListenInternal inside a try/catch. */
-                TryCallCatch(BeginListenInternal);
+                Helpers.TryCallCatch(BeginListenInternal);
                 void BeginListenInternal()
                 {
                     /* Call the listener object to start listening and to call OnConnectInternal
@@ -62,7 +62,7 @@ namespace billpg.pop3
 
                 /* Complete the incoming connection by calling End. */
                 TcpClient tcp = null;                
-                TryCallCatch(EndListenInternal);
+                Helpers.TryCallCatch(EndListenInternal);
                 void EndListenInternal()
                 {
                     tcp = listen.EndAcceptTcpClient(iar);
@@ -74,25 +74,6 @@ namespace billpg.pop3
                     /* Pass the newly opened connection back to the caller's event handler. */
                     onNew(tcp);
                 }
-            }
-
-            /* Call a supplied async function, catching and ignoring known exceptions that occur on shutdown. */
-            void TryCallCatch(Action fn)
-            {
-                try
-                {
-                    /* Call the supplied function inside the try block.. */
-                    fn();
-                }
-
-                /* Ignore these two exceptions, known to be thrown during socket shutdown.
-                 * Other exceptions are allowed to fall to the caller. */
-                catch (ObjectDisposedException ex)
-                when (ex.ObjectName == "System.Net.Sockets.Socket")
-                { }
-                catch (InvalidOperationException ex)
-                when (ex.Message.Contains("Start()"))
-                { }
             }
         }
     }

@@ -216,9 +216,8 @@ namespace billpg.pop3.Tests
             /* Open network streams. */
             UnitTestNetworkStream.Create(out var readStream, out var writeStream);
 
-            /* Set up line reader. Should not (yet) have called back. */
-            var helper = new StreamLineReader(readStream, 10, OnAddLine, OnCloseStream);
-            helper.Start();
+            /* Start line reader. */
+            StreamLineReader.Start(readStream, 10, OnAddLine, OnCloseStream);
 
             /* Send some text, but no end-of line. */
             writeStream.WriteString("Rutabaga");
@@ -241,6 +240,7 @@ namespace billpg.pop3.Tests
             writeStream.WriteString("Last");
             writeStream.Close();
 
+            /* Wait for the service thread to acknowledge the stream has closed. */
             signal.WaitOne();
 
             /* Check the results. */
