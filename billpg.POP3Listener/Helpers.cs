@@ -6,13 +6,16 @@ namespace billpg.pop3
 {
     internal static class Helpers
     {
+        /// <summary>
+        /// Lookup table of ObjectDisposeException.ObjectName property values we want to ignore as errors.
+        /// </summary>
         private static readonly HashSet<string> allowedDisposedObjectNames
             = new HashSet<string> { "System.Net.Sockets.Socket", "System.Net.Sockets.NetworkStream" };
 
         /// <summary>
         /// Call a supplied async function, catching and ignoring known exceptions that occur on shutdown.
         /// </summary>
-        /// <param name="fn"></param>
+        /// <param name="fn">Function to call inside a try/catch.</param>
         internal static void TryCallCatch(Action fn)
         {
             try

@@ -19,16 +19,18 @@ namespace billpg.pop3
         public class Line
         {
             public long Sequence { get; }
-            public byte[] Bytes { get;  }
+            public byte[] Bytes { get; }
             public bool IsCompleteLine { get; }
             public string AsASCII => Encoding.ASCII.GetString(Bytes);
             public string AsUTF8 => Encoding.UTF8.GetString(Bytes);
+            public Action StopReader { get; }
 
-            public Line(byte[] bytes, long sequence, bool isCompleteLine)
+            internal Line(byte[] bytes, long sequence, bool isCompleteLine, Action stopReader)
             {
                 this.Bytes = bytes;
                 this.Sequence = sequence;
                 this.IsCompleteLine = isCompleteLine;
+                this.StopReader = stopReader;
             }        
         }
 
@@ -53,6 +55,11 @@ namespace billpg.pop3
             /* Handy constants. */
             const byte CR = 13;
             const byte LF = 10;
+
+            /* Stop-reader flag with function that can be called by the event handler. */
+            bool stopReaderNow = false;
+            void StopReaderByCaller() 
+                => stopReaderNow = true;
 
             /* Call BeginRead for the first time. */
             InvokeBeginRead();
@@ -183,12 +190,13 @@ namespace billpg.pop3
                         usedLength = 0;
                     }
 
-                    /* Read the next line. */
-                    InvokeBeginRead();
+                    /* Read the next line, unless the event handler raised the signal not to. */
+                    if (stopReaderNow == false)
+                        InvokeBeginRead();
 
                     /* Helper function to call the onReadLine event. */
                     void CallOnReadLine(byte[] line, bool isCompleteLine)
-                        => onReadLine(new Line(line, nextLineSequence++, isCompleteLine));
+                        => onReadLine(new Line(line, nextLineSequence++, isCompleteLine, StopReaderByCaller));
 
                 } /* Release mutex. */
             }
