@@ -14,7 +14,7 @@ namespace billpg.pop3
     {
         private readonly object mutex;
         private readonly List<TcpListener> listeners;
-        private readonly List<SingleConnectionWorker> connections;
+        private readonly List<POP3ServerSession.Info> connections;
         public IIPBanEngine IPBanEngine { get; set; } = new ThreeStrikesBanEngine();
         public bool RequireSecureLogin { get; set; }
         public System.Security.Cryptography.X509Certificates.X509Certificate SecureCertificate { get; set; }
@@ -29,7 +29,7 @@ namespace billpg.pop3
             mutex = new object();
             stopService = new System.Threading.ManualResetEvent(false);
             listeners = new List<TcpListener>();
-            connections = new List<SingleConnectionWorker>();
+            connections = new List<POP3ServerSession.Info>();
             RequireSecureLogin = true;
         }
 
@@ -59,17 +59,13 @@ namespace billpg.pop3
 
             /* Function called by TcpListener when a new incomming connection is made. */
             void OnNewConnection(TcpClient tcp)
+            {
+                lock (mutex)
                 {
-                    /* Start a new connection at the POP3 level. */
-                    var worker = new SingleConnectionWorker(tcp, immediateTls, this);
-
-                    /* Store in the list. */
-                    lock (this.mutex)
-                        this.connections.Add(worker);
-
-                    /* Hand over control to worker. */
-                    worker.WorkerMain();
+                    var connection = POP3ServerSession.Start(tcp, immediateTls, this);
+                    this.connections.Add(connection);
                 }
+            }
         }
 
         public void Stop()
@@ -85,7 +81,7 @@ namespace billpg.pop3
 
                 /* Wait for the running workers to complete. */
                 foreach (var con in this.connections)
-                    con.WaitForStop();
+                    con.Close();
             }
         }
 

@@ -92,6 +92,9 @@ namespace billpg.pop3
             /* Return the next line. */
             return nextLineGen();
         }
+
+        internal string FirstLine
+            => (IsOK ? "+OK" : "-ERR") + " " + (Code == null ? $"[{Code}] " : "") + Text;
     }
 }
 
