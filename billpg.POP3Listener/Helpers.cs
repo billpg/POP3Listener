@@ -33,5 +33,19 @@ namespace billpg.pop3
             when (ex.Message.Contains("Start()"))
             { }
         }
+
+        internal static void DoNothingAction()
+        {
+            /* Do nothing. As designed. */
+        }
+
+        internal static string AsDotQuoted(string line)
+        {
+            /* If the line starts with a ".", add another. */
+            if (line.Length > 1 && line[0] == '.')
+                return "." + line;
+            else
+                return line;
+        }
     }
 }

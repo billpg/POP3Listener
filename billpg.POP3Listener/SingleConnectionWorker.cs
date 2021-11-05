@@ -1,7 +1,7 @@
 /* billpg industries POP3 Listener. */
 /* Copyright, William Godfrey 2021. All Rights Reserved. */
 /* https://billpg.com/POP3/ */
-
+#if false
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -324,3 +324,4 @@ namespace billpg.pop3
 }
 
 
+#endif

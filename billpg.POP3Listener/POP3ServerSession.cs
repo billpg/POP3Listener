@@ -17,31 +17,42 @@ namespace billpg.pop3
 
         internal class Info
         {
-            private Action onClose;
+            private readonly Action onClose;
+            private readonly Func<bool> onIsSecure;
 
-            public Info(Action onClose)
+            public Info(Action onClose, bool isLocalHost, long connectionID, Func<bool> onIsSecure, System.Net.IPAddress clientIP)
             {
                 this.onClose = onClose;
+                this.IsLocalHost = isLocalHost;
+                this.ConnectionID = connectionID;
+                this.onIsSecure = onIsSecure;
+                this.ClientIP = clientIP;
             }
 
-            internal void Close() 
-                => this.onClose();
+            internal void Close() => this.onClose();
+            internal bool IsLocalHost { get; }
+            internal long ConnectionID { get; }
+            internal bool IsSecure => this.onIsSecure();
+            internal System.Net.IPAddress ClientIP { get; }
         }
 
-        internal static Info Start(TcpClient tcp, bool immediateTls, POP3Listener service)
+        internal static Info Start(TcpClient tcp, bool immediateTls, POP3Listener service, long connectionID)
         {
-            /* Initialise data. */
+            /* The initial stream is alway the TCP, but may be replaced with a TLS stream later. */
             Stream str = tcp.GetStream();
-            SslStream tls = null;
 
-            /* Either hand control to TLS (port 995) or connect normally (port 110). */
+            /* Setup the information object for the current connetion. */
+            Info info = new Info(OnClose, IsLocalHost(), connectionID, IsSecure, GetClientIP());
+            CommandHandler handler = new CommandHandler(info, service);
+
+            /* Either hand control to TLS or send a connection banner. */
             if (immediateTls)
                 OnTLS();
             else
                 OnConnect();
 
             /* Return an object for tracking this collection to the caller. */
-            return new Info(OnClose);
+            return info;
 
             /* Called when the caller wants to close this connection down.*/
             void OnClose()
@@ -68,27 +79,30 @@ namespace billpg.pop3
             /* Called to initiate TLS, either by connecting or an STLS command. */
             void OnTLS()
             {
-                tls = new SslStream(str, false);
+                /* Construct a TLS object and have it negotiate with the client.
+                 * This will call OnEndTLS when it has finished. */
+                var tls = new SslStream(str, false);
                 tls.BeginAuthenticateAsServer(service.SecureCertificate, OnEndTLS, null);
-            }
 
-            /* Called when TLS has completed negotiation with the client. */
-            void OnEndTLS(IAsyncResult iar)
-            {
-                tls.EndAuthenticateAsServer(iar);
+                /* Called when TLS has completed negotiation with the client. */
+                void OnEndTLS(IAsyncResult iar)
+                {
+                    /* Complete the async operation. */
+                    tls.EndAuthenticateAsServer(iar);
 
-                /* Complain with a critical response if TLS is anything other than v12. */
-                if (tls.SslProtocol != System.Security.Authentication.SslProtocols.Tls12)
-                    throw new POP3ResponseException("Only TLS 1.2 is supported by this server.", true);
+                    /* Store this new stream over the top of the TCP one, even if we're about o shit it down. */
+                    str = tls;
 
-                /* Store this new stream over the top of the TCP one. */
-                str = tls;
+                    /* Complain (with TLS) with a critical response if TLS is anything other than TLS 1.2. */
+                    if (tls.SslProtocol != System.Security.Authentication.SslProtocols.Tls12)
+                        WriteLine("-ERR [SYS/PERM] Only TLS 1.2 is supported by this server.", OnClose);
 
-                /* Continue as an new conection if we opened with TLS. */
-                if (immediateTls)
-                    OnConnect();
-                else
-                    OnStartReading();
+                    /* Continue as an new conection if we opened with TLS. Otherwise start a new line reader. */
+                    if (immediateTls)
+                        OnConnect();
+                    else
+                        OnStartReading();
+                }
             }
 
             /* Called when connected, eidther directly or after TLS has negotiated. */
@@ -124,10 +138,10 @@ namespace billpg.pop3
             }
 
             /* Called when a line arrives from the client. */
-            void OnReadLine(StreamLineReader.Line line)
+            void OnReadLine(StreamLineReader.Line linePacket)
             {
                 /* Handle STLS as a special case. */
-                if (line.AsASCII == "STLS")
+                if (linePacket.AsASCII == "STLS")
                 {
                     /* Check we're not already secure. */
                     if (IsSecure())
@@ -138,7 +152,7 @@ namespace billpg.pop3
                     else
                     {
                         /* Stop the line reader from reading the TLS ClientHello. */
-                        line.StopReader();
+                        linePacket.StopReader();
 
                         /* Signal to the client to hand over to TLS. */
                         WriteLine("+OK Send TLS ClientHello when ready.", OnTLS);
@@ -148,21 +162,75 @@ namespace billpg.pop3
                 /* Not STLS. */
                 else
                 {
-
-                    /* CHANGE THIS */
-                    if (line.AsASCII == "CAPA")
+                    /* Split into parts, with a special case for no-space. */
+                    string line = linePacket.AsASCII;
+                    string command, pars;
+                    int spaceIndex = line.IndexOf(' ');
+                    if (spaceIndex < 0)
                     {
-                        if (IsSecure())
-                            WriteLine("+OK Capabilities...\\r\nX-TLS True\r\n.", null);
-                        else
-                            WriteLine("+OK Capabilities...\r\nSTLS\r\nX-TLS False\r\n.", null);
+                        command = line;
+                        pars = null;
                     }
                     else
                     {
-                        WriteLine("-ERR Not Implemented.", null);
+                        command = line.Substring(0, spaceIndex);
+                        pars = line.Substring(spaceIndex + 1);
                     }
 
+                    /* Hand over to command event. */
+                    OnCommand(linePacket.Sequence, command.ToUpperInvariant(), pars, linePacket.StopReader);
+                }
+            }
 
+            void OnCommand(long sequence, string command, string pars, Action stopReader)
+            {
+                /* Run command in a try/catch to pick up response exceptions. */
+                PopResponse resp;
+                try
+                {
+                    /* Pass the command over to the session's command handler. */
+                    resp = handler.Command(sequence, command, pars);
+                }
+                catch (Exception ex)
+                {
+                    /* Notify the error. */
+                    service.Events.OnError(handler, ex);
+
+                    /* Convert the caught exception to use as the response object. */
+                    if (ex is POP3ResponseException rex)
+                        resp = rex.AsResponse();
+
+                    /* Turn the default implementation of the provider interface into a non-critical error. */
+                    else if (ex is NotImplementedException niex)
+                        resp = PopResponse.ERR("Command not available.");
+
+                    /* Pass uncaught exceptions as a critical issue. */
+                    else
+                        resp = PopResponse.Critical("SYS/TEMP", "System error. Administrators should check logs.");
+                }
+
+                /* Select the WriteLine action depending on if this is a multi-lne or not. */
+                Action onPostWriteLine = 
+                    resp.IsMultiLine 
+                    ? (Action)OnSendNextResponseLine 
+                    : (Action)Helpers.DoNothingAction;
+
+                /* Send initial line. */
+                WriteLine(resp.FirstLine, onPostWriteLine);
+
+                /* Called when WriteLine finsishes. */
+                void OnSendNextResponseLine()
+                {
+                    /* Get the next line from the response object. */
+                    string nextLine = resp.NextLine();
+
+                    /* If there's another line, send it dot-padded. */
+                    if (nextLine != null)
+                        WriteLine(Helpers.AsDotQuoted(nextLine), OnSendNextResponseLine);
+
+                    /* End of multi-line send a dot and nothing to do. */
+                    else
+                        WriteLine(".", Helpers.DoNothingAction);
                 }
             }
 

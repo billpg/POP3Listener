@@ -63,7 +63,7 @@ namespace billpg.pop3.Tests
                         /* Call UIDL. */
                         WriteLine(str, "UIDL");
                         var uidlResp = string.Join("/", ReadMultiLineIfOkay(str));
-                        Assert.AreEqual("+OK Unique-IDs follow... _/1 a/2 b/3 c/4 d", uidlResp);
+                        Assert.AreEqual("+OK Unique-IDs follow.../1 a/2 b/3 c/4 d", uidlResp);
                         Assert.AreEqual(1, messageListInvokedCount);
 
                         /* Download a message. */

@@ -62,7 +62,7 @@ namespace billpg.pop3
             {
                 lock (mutex)
                 {
-                    var connection = POP3ServerSession.Start(tcp, immediateTls, this);
+                    var connection = POP3ServerSession.Start(tcp, immediateTls, this, GenConnectionID());
                     this.connections.Add(connection);
                 }
             }

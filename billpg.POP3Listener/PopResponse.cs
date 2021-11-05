@@ -94,7 +94,7 @@ namespace billpg.pop3
         }
 
         internal string FirstLine
-            => (IsOK ? "+OK" : "-ERR") + " " + (Code == null ? $"[{Code}] " : "") + Text;
+            => (IsOK ? "+OK" : "-ERR") + " " + (Code == null ? "" : $"[{Code}] ") + Text;
     }
 }
 
