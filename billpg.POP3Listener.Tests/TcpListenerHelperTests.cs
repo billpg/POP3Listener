@@ -190,6 +190,7 @@ namespace billpg.pop3.Tests
             }
         }
 
+#if false
         [TestMethod]
         public void StreamLineReader_Test()
         {
@@ -298,5 +299,6 @@ namespace billpg.pop3.Tests
             /* Check add-line was never called. */
             Assert.IsFalse(onAddLineCalled);
         }
+#endif
     }
 }

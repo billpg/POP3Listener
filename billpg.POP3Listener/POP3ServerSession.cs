@@ -40,6 +40,7 @@ namespace billpg.pop3
         {
             /* The initial stream is alway the TCP, but may be replaced with a TLS stream later. */
             Stream str = tcp.GetStream();
+            BufferedLineReader lineReader = new BufferedLineReader(str, 1024 * 64);
 
             /* Setup the information object for the current connetion. */
             Info info = new Info(OnClose, IsLocalHost(), connectionID, IsSecure, GetClientIP());
@@ -92,6 +93,7 @@ namespace billpg.pop3
 
                     /* Store this new stream over the top of the TCP one, even if we're about o shit it down. */
                     str = tls;
+                    lineReader = new BufferedLineReader(str, 1024 * 64);
 
                     /* Complain (with TLS) with a critical response if TLS is anything other than TLS 1.2. */
                     if (tls.SslProtocol != System.Security.Authentication.SslProtocols.Tls12)
@@ -101,15 +103,15 @@ namespace billpg.pop3
                     if (immediateTls)
                         OnConnect();
                     else
-                        OnStartReading();
+                        OnStartReadLine();
                 }
             }
 
             /* Called when connected, eidther directly or after TLS has negotiated. */
             void OnConnect()
             {
-                /* Write the banner. Once it ha finished, launch the line reader. */
-                WriteLine($"+OK {service.ServiceName}", OnStartReading);
+                /* Write the banner. Once it has finished, launch the line reader. */
+                WriteLine($"+OK {service.ServiceName}", OnStartReadLine);
             }
 
             /* Called to send a single line and call the supplied event on completion. */
@@ -130,30 +132,46 @@ namespace billpg.pop3
                 }                
             }
 
-            /* Called to start reading. Either after the connection banner or after STLS. */
-            void OnStartReading()
+            /* Called when ready to read a line. */
+            void OnStartReadLine()
             {
                 /* Start a new stream of reading. */
-                StreamLineReader.Start(str, 1024, OnReadLine, OnCloseStream);
+                lineReader.ReadLine(OnReadCommand);
+            }
+
+            /* Called when ready to close the connection down. */
+            void OnStartClose()
+            {
+                /* Close the underlying connection. */
+                str.Close();
+
+                /* Inform the service this connection is no longer active. */
+                service.RemoveConnection(info);
             }
 
             /* Called when a line arrives from the client. */
-            void OnReadLine(StreamLineReader.Line linePacket)
+            void OnReadCommand(ByteString linePacket, bool isCompleteLine)
             {
+                /* Hanlde stream-closed. */
+                if (linePacket == null)
+                {
+                    OnStartClose();
+                }
+
                 /* Handle STLS as a special case. */
-                if (linePacket.AsASCII == "STLS")
+                else if (linePacket.AsASCII == "STLS")
                 {
                     /* Check we're not already secure. */
                     if (IsSecure())
                     {
                         /* Report error. Nothing to do on complete as StreamLineReader is running. */
                         WriteLine("-ERR Already secure", null);
+
+                        /* Read the next line. */
+                        OnStartReadLine();
                     }
                     else
                     {
-                        /* Stop the line reader from reading the TLS ClientHello. */
-                        linePacket.StopReader();
-
                         /* Signal to the client to hand over to TLS. */
                         WriteLine("+OK Send TLS ClientHello when ready.", OnTLS);
                     }
@@ -177,19 +195,19 @@ namespace billpg.pop3
                         pars = line.Substring(spaceIndex + 1);
                     }
 
-                    /* Hand over to command event. */
-                    OnCommand(linePacket.Sequence, command.ToUpperInvariant(), pars, linePacket.StopReader);
+                    /* Handle the command. This function will launch another line read if it wishes. */
+                    OnCommand(command.ToUpperInvariant(), pars);
                 }
             }
 
-            void OnCommand(long sequence, string command, string pars, Action stopReader)
+            void OnCommand(string command, string pars)
             {
                 /* Run command in a try/catch to pick up response exceptions. */
                 PopResponse resp;
                 try
                 {
                     /* Pass the command over to the session's command handler. */
-                    resp = handler.Command(sequence, command, pars);
+                    resp = handler.Command(-1, command, pars);
                 }
                 catch (Exception ex)
                 {
@@ -209,14 +227,27 @@ namespace billpg.pop3
                         resp = PopResponse.Critical("SYS/TEMP", "System error. Administrators should check logs.");
                 }
 
+                /* Send the response to the client. This will trigger the next event. */
+                SendResponse(resp);
+            }
+                
+            void SendResponse(PopResponse resp)
+            { 
+                /* Select the next action based on this being a quit/critical or not. */
+                Action onComplete =
+                    resp.IsQuit
+                    ? (Action)OnStartClose
+                    : (Action)OnStartReadLine;
+
                 /* Select the WriteLine action depending on if this is a multi-lne or not. */
                 Action onPostWriteLine = 
                     resp.IsMultiLine 
-                    ? (Action)OnSendNextResponseLine 
-                    : (Action)Helpers.DoNothingAction;
+                    ? (Action)OnSendNextResponseLine
+                    : (Action)onComplete;
+
 
                 /* Send initial line. */
-                WriteLine(resp.FirstLine, onPostWriteLine);
+                WriteLine(resp.FirstLine, WrapTryCatch(onPostWriteLine, OnCriticalError));
 
                 /* Called when WriteLine finsishes. */
                 void OnSendNextResponseLine()
@@ -226,19 +257,38 @@ namespace billpg.pop3
 
                     /* If there's another line, send it dot-padded. */
                     if (nextLine != null)
-                        WriteLine(Helpers.AsDotQuoted(nextLine), OnSendNextResponseLine);
+                        WriteLine(Helpers.AsDotQuoted(nextLine), WrapTryCatch(OnSendNextResponseLine, OnCriticalError));
 
-                    /* End of multi-line send a dot and nothing to do. */
+                    /* End of multi-line. Send a dot then start reading. */
                     else
-                        WriteLine(".", Helpers.DoNothingAction);
+                        WriteLine(".", OnStartReadLine);
                 }
             }
 
-            void OnCloseStream()
+            void OnCriticalError(Exception ex)
             {
-
+                if (ex is POP3ResponseException popex)
+                    SendResponse(popex.AsResponse());
+                else
+                    SendResponse(PopResponse.Critical("SYS/TEMP", "Critcal error."));
             }
 
+        }
+
+        private static Action WrapTryCatch(Action fn, Action<Exception> onError)
+        {
+            return Internal;
+            void Internal()
+            {
+                try
+                {
+                    fn();
+                }
+                catch (Exception ex)
+                {
+                    onError(ex);
+                }
+            }
         }
     }
 }

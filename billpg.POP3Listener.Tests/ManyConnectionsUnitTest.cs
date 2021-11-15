@@ -177,7 +177,7 @@ namespace billpg.pop3.Tests
                 /* Load UIDL */
                 str.WriteLine("UIDL");
                 var uidlResp = str.ReadLine();
-                AssertAreEqual("+OK Unique-IDs follow... _", uidlResp);
+                AssertAreEqual("+OK Unique-IDs follow...", uidlResp);
                 var uidl = new Dictionary<int, string>();
                 while (true)
                 {

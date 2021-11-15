@@ -42,6 +42,11 @@ namespace billpg.pop3.Tests
                 return "a,b,c,d".Split(',');
             }
 
+            /* Set up a message size handler that returns the single letter of the uniqueID's asciii code. */
+            pop3.Events.OnMessageSize = MyMessageSize;
+            long MyMessageSize(string mailboxID, string uniqueID)
+                => uniqueID.Single();
+
             /* Connect to the server. */
             pop3.ListenOn(IPAddress.Loopback, port110, false);
             try
@@ -67,19 +72,19 @@ namespace billpg.pop3.Tests
                         Assert.AreEqual(1, messageListInvokedCount);
 
                         /* Download a message. */
-                        WriteLine(str, "RETR 1");
+                        WriteLine(str, "LIST 1");
                         var retr1Resp = ReadLine(str);
-                        Assert.AreEqual("-ERR OnMessageRetrieval handler not set.", retr1Resp);
+                        Assert.AreEqual("+OK 1 97", retr1Resp);
                         Assert.AreEqual(1, messageListInvokedCount);
 
                         /* Download a message by UID that the server already knows about. */
-                        WriteLine(str, "RETR UID:c");
+                        WriteLine(str, "LIST UID:c");
                         var retr2resp = ReadLine(str);
-                        Assert.AreEqual("-ERR OnMessageRetrieval handler not set.", retr2resp);
+                        Assert.AreEqual("+OK 3 99", retr2resp);
                         Assert.AreEqual(1, messageListInvokedCount);
 
                         /* Now request a UID that doesn't exist. */
-                        WriteLine(str, "RETR UID:z");
+                        WriteLine(str, "LIST UID:z");
                         var retr3resp = ReadLine(str);
                         Assert.AreEqual("-ERR [UID/NOT-FOUND] No such UID.", retr3resp);
                         Assert.AreEqual(2, messageListInvokedCount);
@@ -132,8 +137,8 @@ namespace billpg.pop3.Tests
                         /* Now request a real message. This should raise the flag this time.
                          * (The critical error is because the above download handler didn't set OnNextLine.) */
                         WriteLine(str, "RETR UID:a");
-                        Assert.AreEqual("+OK Message text follows... _", ReadLine(str));
-                        Assert.AreEqual("-ERR [SYS/TEMP] Critical error. Closing conection.", ReadLine(str));
+                        Assert.AreEqual("+OK Message text follows...", ReadLine(str));
+                        Assert.AreEqual("-ERR OnNextLine event handler has not been set.", ReadLine(str));
                         Assert.IsTrue(wasCalled);
                     }
                 }
@@ -583,7 +588,7 @@ namespace billpg.pop3.Tests
                 /* Without calling refresh, download the new unique-id. */
                 WriteLine(str, $"RETR UID:{uniqueIDNew}");
                 var retrResp = ReadMultiLineIfOkay(str);
-                Assert.AreEqual("+OK Message text follows... _", retrResp.First());
+                Assert.AreEqual("+OK Message text follows...", retrResp.First());
                 Assert.IsTrue(retrResp.Contains($"Unique id: {uniqueIDNew}"));
 
                 /* But a made up Unique ID should fail. */
@@ -792,6 +797,79 @@ namespace billpg.pop3.Tests
                     }
                 }
             }
+        }
+
+        [TestMethod]
+        public void POP3_QUIT()
+        {
+            using (var pop3 = new POP3Listener())
+            {
+                /* Start listening, allowing the OS to pick to the port. */
+                int svcPort = pop3.ListenOnRandom(IPAddress.Loopback, false);
+                Assert.IsTrue(svcPort > 1023);
+                Assert.IsTrue(svcPort < 65536);
+
+                /* Open a client. */
+                using (var tcp = new TcpClient())
+                {
+                    /* Connect to the normal insecure port. */
+                    tcp.Connect("localhost", svcPort);
+                    var str = tcp.GetStream();
+
+                    /* Read the banner. */
+                    string banner = ReadLine(str);
+                    Assert.IsTrue(banner.StartsWith("+OK "));
+
+                    /* Send a QUIT command. */
+                    str.WriteLine("QUIT");
+
+                    /* Read the response. */
+                    string quitResp = ReadLine(str);
+                    Assert.AreEqual("+OK Closing connection without authenticating.", quitResp);
+
+                    /* Confirm the stream is closed. */
+                    Assert.AreEqual(-1, str.ReadByte());
+                }
+            }
+        }
+
+        [TestMethod]
+        public void POP3_AuthThrowsAppException()
+            => AuthThrowsInternal(new ApplicationException("Oops"), "-ERR [SYS/TEMP] System error. Administrators should check logs.");
+
+        [TestMethod]
+        public void POP3_AuthThrowsPopRespException()
+            => AuthThrowsInternal(new POP3ResponseException("Oopsy"), "-ERR Oopsy");
+
+        [TestMethod]
+        public void POP3_AuthThrowsPopRespExceptionWithCode()
+            => AuthThrowsInternal(new POP3ResponseException("UNIT/TEST","Oopsy doopsy!"), "-ERR [UNIT/TEST] Oopsy doopsy!");
+
+        private void AuthThrowsInternal(Exception ex, string expectedPassResp)
+        {
+            /* Start listening. All autentication requests throw errors. */
+            using var pop3 = new POP3Listener();
+            pop3.Events.OnAuthenticate = x => throw ex;
+            int svcPort = pop3.ListenOnRandom(IPAddress.Loopback, false);
+
+            /* Connect. */
+            using var tcp = new TcpClient();
+            tcp.Connect("localhost", svcPort);
+            using var str = tcp.GetStream();
+
+            /* Read the banner. */
+            string banner = ReadLine(str);
+            Assert.IsTrue(banner.StartsWith("+OK "));
+
+            /* Send USER command, expecting a +OK response. */
+            str.WriteLine("USER itsame");
+            string userResp = str.ReadLine();
+            Assert.AreEqual("+OK Thank you. Send password.", userResp);
+
+            /* Send PASS command, expecting a -ERR response. */
+            str.WriteLine("PASS mario!");
+            string passResp = str.ReadLine();
+            Assert.AreEqual(expectedPassResp, passResp);
         }
 
         private List<string> ReadMultiLineIfOkay(Stream str)

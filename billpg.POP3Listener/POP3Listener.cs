@@ -88,6 +88,15 @@ namespace billpg.pop3
             }
         }
 
+
+        internal void RemoveConnection(POP3ServerSession.Info con)
+        {
+            lock (mutex)
+            {
+                this.connections.Remove(con);
+            }
+        }
+
         public void Stop()
         {
             lock (this.mutex)
@@ -107,6 +116,7 @@ namespace billpg.pop3
 
         void IDisposable.Dispose() 
             => Stop();
+
     }
 }
 

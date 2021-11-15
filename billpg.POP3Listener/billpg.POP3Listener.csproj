@@ -10,6 +10,7 @@
     <Compile Remove="Actions.cs" />
     <Compile Remove="LineReader.cs" />
     <Compile Remove="ActiveConnection.cs" />
+    <Compile Remove="StreamLineReader.cs" />
   </ItemGroup>
 
 </Project>
