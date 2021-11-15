@@ -42,8 +42,8 @@ namespace billpg.pop3
             OnAuthenticate = req => req.AuthMailboxID = null;
             OnMessageList = mailboxID => Enumerable.Empty<string>();
             OnMessageSize = (mailboxID, messageUID) => ContentWrappers.MessageSizeByRetrieval(this.OnMessageRetrieval, mailboxID, messageUID);
-            OnMessageRetrieval = req => throw new POP3ResponseException("OnMessageRetrieval handler not set.");
-            OnMessageDelete = (mailboxID, messageUID) => throw new POP3ResponseException("OnMessageDelete handler not set.");
+            OnMessageRetrieval = req => throw new POP3ResponseException("SYS/PERM", "Retrieval not configured.", true);
+            OnMessageDelete = (mailboxID, messageUID) => throw new POP3ResponseException("SYS/PERM", "Deletes not configured.", true);
             OnError = (info, ex) => { };
         }
     }
