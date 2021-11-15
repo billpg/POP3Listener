@@ -47,18 +47,38 @@ namespace billpg.pop3
             ListenOn(addr, 9955, true);
         }
 
+        public int ListenOnRandom(IPAddress addr, bool immediateTls)
+        {
+            /* Create a listener, allowing the OS to pick the port number. */
+            TcpListener listen = new TcpListener(addr, 0);
+
+            /* Start listening. */
+            listen.StartListen(OnNewConnection(immediateTls));
+            StoreNewListener(listen);
+
+            /* Return the selected port. */
+            return ((IPEndPoint)listen.LocalEndpoint).Port;
+        }
+
         public void ListenOn(IPAddress addr, int port, bool immediateTls)
         {
             /* Create new listener. */
             TcpListener listen = new TcpListener(addr, port);
-            listen.StartListen(OnNewConnection);
+            listen.StartListen(OnNewConnection(immediateTls));
+            StoreNewListener(listen);
+        }
 
+        private void StoreNewListener(TcpListener listen)
+        {
             /* Store in collection. */
             lock (this.mutex)
                 this.listeners.Add(listen);
+        }
 
-            /* Function called by TcpListener when a new incomming connection is made. */
-            void OnNewConnection(TcpClient tcp)
+        private TcpListenerHelper.OnNewConnectionDelegate OnNewConnection(bool immediateTls)
+        {
+            return Internal;
+            void Internal(TcpClient tcp)
             {
                 lock (mutex)
                 {
