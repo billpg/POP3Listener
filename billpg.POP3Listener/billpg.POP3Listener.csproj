@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Compile Remove="Actions.cs" />
+    <Compile Remove="BufferedLineReader.cs" />
     <Compile Remove="LineReader.cs" />
     <Compile Remove="ActiveConnection.cs" />
     <Compile Remove="StreamLineReader.cs" />

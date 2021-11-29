@@ -41,7 +41,7 @@ namespace billpg.pop3
             this.AuthMailboxID = authMailboxID;
             this.MessageUniqueID = messageUniqueID;
             this.TopLineCount = topLineCount;
-            this.OnNextLine = () => throw new POP3ResponseException("OnNextLine event handler has not been set.");
+            this.OnNextLine = () => throw new ApplicationException("OnNextLine event handler has not been set.");
             this.OnClose = DefaultOnClose;
             this.AcceptRetrieval = false;
         }

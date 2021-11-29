@@ -98,58 +98,6 @@ namespace billpg.pop3.Tests
         }
 
         [TestMethod]
-        public void POP3_NoPassBadUniqueIDs()
-        {
-            /* Construct a listener. */
-            POP3Listener pop3 = new POP3Listener();
-            pop3.Events.OnAuthenticate = req => req.AuthMailboxID = "x";
-
-            /* Set up a mailbox-list handler with some messages. */
-            pop3.Events.OnMessageList = IncrementCounter;
-            IEnumerable<string> IncrementCounter(string mailboxID)
-                => "a,b,c,d".Split(',');
-
-            /* Set up download and delete functions that raise a flag is called. */
-            bool wasCalled = false;
-            pop3.Events.OnMessageRetrieval = req =>  wasCalled = true;
-            pop3.Events.OnMessageDelete = (x, y) => wasCalled = true;
-
-            /* Connect to the server. */
-            pop3.ListenOn(IPAddress.Loopback, port110, false);
-            try
-            {
-                using (var tcp = new TcpClient("localhost", port110))
-                {
-                    using (var str = tcp.GetStream())
-                    {
-                        /* Send a sequence of commands. */
-                        WriteLine(str, "XLOG x x\r\nRETR UID:x\r\nDELE UID:x");
-
-                        /* Read back the welcome banner and the responses to the three commands. */
-                        Assert.AreEqual("+OK POP3 service by billpg industries https://billpg.com/POP3/", ReadLine(str));
-                        Assert.AreEqual("+OK Welcome.", ReadLine(str));
-                        Assert.AreEqual("-ERR [UID/NOT-FOUND] No such UID.", ReadLine(str));
-                        Assert.AreEqual("-ERR [UID/NOT-FOUND] No such UID.", ReadLine(str));
-
-                        /* Check UID:x did not cause a download or delete event. */
-                        Assert.IsFalse(wasCalled);
-
-                        /* Now request a real message. This should raise the flag this time.
-                         * (The critical error is because the above download handler didn't set OnNextLine.) */
-                        WriteLine(str, "RETR UID:a");
-                        Assert.AreEqual("+OK Message text follows...", ReadLine(str));
-                        Assert.AreEqual("-ERR OnNextLine event handler has not been set.", ReadLine(str));
-                        Assert.IsTrue(wasCalled);
-                    }
-                }
-            }
-            finally
-            {
-                pop3.Stop();
-            }
-        }            
-
-        [TestMethod]
         public void POP3_SLEE_WAKE()
         {
             RunTestLoggedIn(Internal);
@@ -752,13 +700,24 @@ namespace billpg.pop3.Tests
             }
         }
 
-        [TestMethod]
-        public void POP3_UIDL_BadUniqueIDs() 
-            => UniqueIDValidation(false, "\r\n", "", " ", $"{(char)127}", "_", "\uD83D\uDC18", "\u0418", new string('J', 71));
+        [TestMethod] public void POP3_UIDL_BadUniqueID_CRLF() => UniqueIDValidation(false, "\r\n");
+        [TestMethod] public void POP3_UIDL_BadUniqueID_Empty() => UniqueIDValidation(false, "");
+        [TestMethod] public void POP3_UIDL_BadUniqueID_Space() => UniqueIDValidation(false, " ");
+        [TestMethod] public void POP3_UIDL_BadUniqueID_DEL() => UniqueIDValidation(false, $"{(char)127}");
+        [TestMethod] public void POP3_UIDL_BadUniqueID_Underscore() => UniqueIDValidation(false, "_");
+        [TestMethod] public void POP3_UIDL_BadUniqueID_Emoji() => UniqueIDValidation(false, "\uD83D\uDC18");
+        [TestMethod] public void POP3_UIDL_BadUniqueID_Unicode() => UniqueIDValidation(false, "\u0418");
+        [TestMethod] public void POP3_UIDL_BadUniqueID_71Chars() => UniqueIDValidation(false, new string('J', 71));
 
-        [TestMethod]
-        public void POP3_UIDL_GoodUniqueIDs()
-            => UniqueIDValidation(true, "\\r\\n", "\"\"", "!", "~", "!~", "__", "\\uD83D\\uDC18", "\\u0418", new string('!', 70));
+        [TestMethod] public void POP3_UIDL_GoodUniqueID_SSrSSn() => UniqueIDValidation(true, "\\r\\n");
+        [TestMethod] public void POP3_UIDL_GoodUniqueID_Quotes() => UniqueIDValidation(true, "\"\"");
+        [TestMethod] public void POP3_UIDL_GoodUniqueID_Excl() => UniqueIDValidation(true, "!");
+        [TestMethod] public void POP3_UIDL_GoodUniqueID_Tilde() => UniqueIDValidation(true, "~");
+        [TestMethod] public void POP3_UIDL_GoodUniqueID_ExclTidle() => UniqueIDValidation(true, "!~");
+        [TestMethod] public void POP3_UIDL_GoodUniqueID_2Underscores() => UniqueIDValidation(true, "__");
+        [TestMethod] public void POP3_UIDL_GoodUniqueID_SSHexSShex() => UniqueIDValidation(true, "\\uD83D\\uDC18");
+        [TestMethod] public void POP3_UIDL_GoodUniqueID_SSHex() => UniqueIDValidation(true, "\\u0418");
+        [TestMethod] public void POP3_UIDL_GoodUniqueID_70Chars() => UniqueIDValidation(true, new string('!', 70));
 
         void UniqueIDValidation(bool expectedValid, params string[] uniqueIDs)
         {
@@ -770,6 +729,11 @@ namespace billpg.pop3.Tests
                     prov.uniqueIdsInMailbox = new List<string> { badUniqueID };
                     listener.Events.OnAuthenticate = prov.OnAuthenticateRequest;
                     listener.Events.OnMessageList = prov.OnMessageListRequest;
+                    listener.Events.OnCommandReceived = MyCommandRecv;
+                    void MyCommandRecv(IPOP3ConnectionInfo info, string command)
+                    {
+
+                    }
                     listener.ListenOnHigh(IPAddress.Loopback);
 
                     using (var tcp = new TcpClient())
@@ -835,21 +799,61 @@ namespace billpg.pop3.Tests
 
         [TestMethod]
         public void POP3_AuthThrowsAppException()
-            => AuthThrowsInternal(new ApplicationException("Oops"), "-ERR [SYS/TEMP] System error. Administrators should check logs.");
+            => WithThrowInternal("auth", new ApplicationException("Oops"), "-ERR [SYS/TEMP] System error. Administrators should check logs.", null);
 
         [TestMethod]
         public void POP3_AuthThrowsPopRespException()
-            => AuthThrowsInternal(new POP3ResponseException("Oopsy"), "-ERR Oopsy");
+            => WithThrowInternal("auth", new POP3ResponseException("Oopsy"), "-ERR Oopsy", "-ERR Authenticate first.");
 
         [TestMethod]
         public void POP3_AuthThrowsPopRespExceptionWithCode()
-            => AuthThrowsInternal(new POP3ResponseException("UNIT/TEST","Oopsy doopsy!"), "-ERR [UNIT/TEST] Oopsy doopsy!");
+            => WithThrowInternal("auth", new POP3ResponseException("UNIT/TEST","Oopsy doopsy!"), "-ERR [UNIT/TEST] Oopsy doopsy!", "-ERR Authenticate first.");
 
-        private void AuthThrowsInternal(Exception ex, string expectedPassResp)
+        [TestMethod]
+        public void POP3_ListThrowsAppException()
+            => WithThrowInternal("list", new ApplicationException("Oops"), "-ERR [SYS/TEMP] System error. Administrators should check logs.", null);
+
+        [TestMethod]
+        public void POP3_ListThrowsPopRespException()
+            => WithThrowInternal("list", new POP3ResponseException("Oopsy"), "-ERR Oopsy", "-ERR [SYS/TEMP] System error. Administrators should check logs.");
+
+        [TestMethod]
+        public void POP3_ListThrowsPopRespExceptionWithCode()
+            => WithThrowInternal("list", new POP3ResponseException("UNIT/TEST", "Oopsy doopsy!"), "-ERR [UNIT/TEST] Oopsy doopsy!", "-ERR [SYS/TEMP] System error. Administrators should check logs.");
+
+        [TestMethod]
+        public void POP3_SizeThrowsAppException()
+            => WithThrowInternal("size", new ApplicationException("Oops"), "+OK Welcome.", "-ERR [SYS/TEMP] System error. Administrators should check logs.");
+
+        [TestMethod]
+        public void POP3_SizeThrowsPopRespException()
+            => WithThrowInternal("size", new POP3ResponseException("Oopsy"), "+OK Welcome.", "-ERR Oopsy");
+
+        [TestMethod]
+        public void POP3_SizeThrowsPopRespExceptionWithCode()
+            => WithThrowInternal("size", new POP3ResponseException("UNIT/TEST", "Oopsy doopsy!"), "+OK Welcome.", "-ERR [UNIT/TEST] Oopsy doopsy!");
+
+        private void WithThrowInternal(string mode, Exception ex, string expectedPassResp, string expectedStatResp)
         {
             /* Start listening. All autentication requests throw errors. */
             using var pop3 = new POP3Listener();
-            pop3.Events.OnAuthenticate = x => throw ex;
+            if (mode == "auth")
+            {
+                pop3.Events.OnAuthenticate = x => throw ex;
+            }
+            else if (mode == "list")
+            {
+                pop3.Events.OnAuthenticate = x => x.AuthMailboxID = "x";
+                pop3.Events.OnMessageList = x => throw ex;
+            }
+            else if (mode == "size")
+            {
+                pop3.Events.OnAuthenticate = x => x.AuthMailboxID = "x";
+                pop3.Events.OnMessageList = x => new List<string> { "a" };
+                pop3.Events.OnMessageSize = (x,y) => throw ex;
+            }
+
+            /* Start listening. */
             int svcPort = pop3.ListenOnRandom(IPAddress.Loopback, false);
 
             /* Connect. */
@@ -870,7 +874,22 @@ namespace billpg.pop3.Tests
             str.WriteLine("PASS mario!");
             string passResp = str.ReadLine();
             Assert.AreEqual(expectedPassResp, passResp);
+
+            /* Stop test if null stat response. */
+            if (expectedStatResp == null)
+            {
+                Assert.AreEqual(10, str.ReadByte());
+                Assert.AreEqual(-1, str.ReadByte());
+                return;
+            }
+
+            /* Send STAT command. */
+            str.WriteLine("STAT");
+            string statResp = str.ReadLine();
+            Assert.AreEqual(expectedStatResp, statResp);
         }
+
+
 
         private List<string> ReadMultiLineIfOkay(Stream str)
         {

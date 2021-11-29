@@ -14,7 +14,7 @@ namespace billpg.pop3
     {
         private readonly object mutex;
         private readonly List<TcpListener> listeners;
-        private readonly List<POP3ServerSession.Info> connections;
+        private readonly List<POP3ServerSession> connections;
         public IIPBanEngine IPBanEngine { get; set; } = new ThreeStrikesBanEngine();
         public bool RequireSecureLogin { get; set; }
         public System.Security.Cryptography.X509Certificates.X509Certificate SecureCertificate { get; set; }
@@ -29,7 +29,7 @@ namespace billpg.pop3
             mutex = new object();
             stopService = new System.Threading.ManualResetEvent(false);
             listeners = new List<TcpListener>();
-            connections = new List<POP3ServerSession.Info>();
+            connections = new List<POP3ServerSession>();
             RequireSecureLogin = true;
         }
 
@@ -82,14 +82,15 @@ namespace billpg.pop3
             {
                 lock (mutex)
                 {
-                    var connection = POP3ServerSession.Start(tcp, immediateTls, this, GenConnectionID());
+                    var connection = new POP3ServerSession(tcp, immediateTls, this, GenConnectionID());                   
                     this.connections.Add(connection);
+                    connection.Start();
                 }
             }
         }
 
 
-        internal void RemoveConnection(POP3ServerSession.Info con)
+        internal void RemoveConnection(POP3ServerSession con)
         {
             lock (mutex)
             {
@@ -110,7 +111,7 @@ namespace billpg.pop3
 
                 /* Wait for the running workers to complete. */
                 foreach (var con in this.connections)
-                    con.Close();
+                    con.ServiceShutdown();
             }
         }
 

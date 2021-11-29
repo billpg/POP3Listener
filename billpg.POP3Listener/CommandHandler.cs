@@ -20,7 +20,7 @@ namespace billpg.pop3
         private bool authenticated => authMailboxID != null;
         private IList<string> uniqueIDs = null;
         private readonly List<string> deletedUniqueIDs = new List<string>();
-        private readonly POP3ServerSession.Info activeConnection;
+        private readonly POP3ServerSession activeConnection;
         private bool isSleeping = false;
 
         System.Net.IPAddress IPOP3ConnectionInfo.ClientIP => activeConnection.ClientIP;
@@ -57,7 +57,7 @@ namespace billpg.pop3
 
         private const string UidParamPrefix = "UID:";
 
-        public CommandHandler(POP3ServerSession.Info activeConnection, POP3Listener service)
+        public CommandHandler(POP3ServerSession activeConnection, POP3Listener service)
         {
             this.activeConnection = activeConnection;
             this.service = service;
