@@ -146,9 +146,9 @@ namespace billpg.pop3
             if (resp.IsMultiLine)
                 task.LockContinueWith(mutex, ContinueSendResponse);
             else if (resp.IsQuit)
-                task.LockContinueWith(mutex, CompleteSendResponseQuit);
+                task.LockContinueWith(mutex, CompleteSendResponse(CloseConnection));
             else
-                task.LockContinueWith(mutex, CompleteSendResponseRead);
+                task.LockContinueWith(mutex, CompleteSendResponse(InterpretCommand));
         }
 
         private void ContinueSendResponse(Task task)
@@ -169,7 +169,7 @@ namespace billpg.pop3
                 {
                     /* Send a dot multi-line teminator and return to reading command. */
                     currStream.WriteLineAsync(".")
-                        .LockContinueWith(mutex, CompleteSendResponseRead);
+                        .LockContinueWith(mutex, CompleteSendResponse(InterpretCommand));
                 }
             }
             else
@@ -178,42 +178,20 @@ namespace billpg.pop3
             }
         }
 
-        private void CompleteSendResponseQuit(Task task)
+        private Action<Task> CompleteSendResponse(Action onRanToComplete)
         {
-            if (task.Status == TaskStatus.RanToCompletion)
+            return Internal;
+            void Internal(Task task)
             {
-                currResp = null;
-                CloseConnection();
-            }
-            else
-            {
+                if (task.Status == TaskStatus.RanToCompletion)
+                {
+                    currResp = null;
+                    onRanToComplete();
+                }
+                else
+                {
 
-            }
-        }
-
-        private void CompleteSendResponseRead(Task task)
-        {
-            if (task.Status == TaskStatus.RanToCompletion)
-            {
-                currResp = null;
-                InterpretCommand();
-            }
-            else
-            {
-
-            }
-        }
-
-        private void CompleteSendResponseHandshakeTLS(Task task)
-        {
-            if (task.Status == TaskStatus.RanToCompletion)
-            {
-                currResp = null;
-                HandshakeTLS();
-            }
-            else
-            {
-
+                }
             }
         }
 
@@ -247,7 +225,7 @@ namespace billpg.pop3
                 {
                     /* Signal to the client to hand over to TLS. */
                     currStream.WriteLineAsync("+OK Send TLS ClientHello when ready.")
-                        .LockContinueWith(mutex, CompleteSendResponseHandshakeTLS);
+                        .LockContinueWith(mutex, CompleteSendResponse(HandshakeTLS));
                 }
             }
 
