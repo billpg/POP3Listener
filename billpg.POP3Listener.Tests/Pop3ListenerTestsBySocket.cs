@@ -18,7 +18,7 @@ namespace billpg.pop3.Tests
 {
 
     [TestClass]
-    public class Pop3ListenerTestsBySocket
+    public partial class Pop3ListenerTestsBySocket
     {
         internal static readonly UTF8Encoding UTF8 = new UTF8Encoding(false);
         internal static readonly IEnumerable<bool> falseAndTrue = new List<bool>(){ false, true }.AsReadOnly();
@@ -699,7 +699,11 @@ namespace billpg.pop3.Tests
                 Assert.IsTrue(capa.Contains("DELI"));
             }
         }
+    }
 
+    [TestClass]
+    public class GoodBadUniqueIDs
+    {
         [TestMethod] public void POP3_UIDL_BadUniqueID_CRLF() => UniqueIDValidation(false, "\r\n");
         [TestMethod] public void POP3_UIDL_BadUniqueID_Empty() => UniqueIDValidation(false, "");
         [TestMethod] public void POP3_UIDL_BadUniqueID_Space() => UniqueIDValidation(false, " ");
@@ -734,26 +738,26 @@ namespace billpg.pop3.Tests
                     {
 
                     }
-                    listener.ListenOnHigh(IPAddress.Loopback);
+                    int port = listener.ListenOnRandom(IPAddress.Loopback, false);
 
                     using (var tcp = new TcpClient())
                     {
                         /* Connect to the normal insecure port. */
-                        tcp.Connect("localhost", port110);
+                        tcp.Connect("localhost", port);
                         var str = tcp.GetStream();
 
                         /* Read the banner. */
-                        string banner = ReadLine(str);
+                        string banner = str.ReadLine();
                         Assert.IsTrue(banner.StartsWith("+OK "));
 
                         /* USER. */
-                        WriteLine(str, "USER me");
-                        string userResp = ReadLine(str);
+                        str.WriteLine("USER me");
+                        string userResp = str.ReadLine();
                         Assert.IsTrue(userResp.StartsWith("+OK "));
 
                         /* PASS. The server should check the list of uniqueIDs here and reject if there are any bad ones. */
-                        WriteLine(str, "PASS passw0rd");
-                        string passResp = ReadLine(str);
+                        str.WriteLine("PASS passw0rd");
+                        string passResp = str.ReadLine();
                         if (expectedValid)
                             Assert.AreEqual("+OK Welcome.", passResp);
                         else
@@ -762,7 +766,10 @@ namespace billpg.pop3.Tests
                 }
             }
         }
+    }
 
+    partial class Pop3ListenerTestsBySocket
+    {
         [TestMethod]
         public void POP3_QUIT()
         {
@@ -796,7 +803,11 @@ namespace billpg.pop3.Tests
                 }
             }
         }
+    }
 
+    [TestClass]
+    public class DeliberatelyThrowExceptions
+    {
         [TestMethod]
         public void POP3_AuthThrowsAppException()
             => WithThrowInternal("auth", new ApplicationException("Oops"), "-ERR [SYS/TEMP] System error. Administrators should check logs.", null);
@@ -862,7 +873,7 @@ namespace billpg.pop3.Tests
             using var str = tcp.GetStream();
 
             /* Read the banner. */
-            string banner = ReadLine(str);
+            string banner = str.ReadLine();
             Assert.IsTrue(banner.StartsWith("+OK "));
 
             /* Send USER command, expecting a +OK response. */
@@ -888,9 +899,10 @@ namespace billpg.pop3.Tests
             string statResp = str.ReadLine();
             Assert.AreEqual(expectedStatResp, statResp);
         }
+    }
 
-
-
+    partial class Pop3ListenerTestsBySocket
+    {
         private List<string> ReadMultiLineIfOkay(Stream str)
         {
             /* Read the first line. */
