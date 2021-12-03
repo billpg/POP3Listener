@@ -153,6 +153,7 @@ namespace billpg.pop3
 
         private void ContinueSendResponse(Task task)
         {
+            /* Handle successfully sending a response line. */
             if (task.Status == TaskStatus.RanToCompletion)
             {
                 /* Next line? */
@@ -172,25 +173,54 @@ namespace billpg.pop3
                         .LockContinueWith(mutex, CompleteSendResponse(InterpretCommand));
                 }
             }
+
+            /* Handle error during write. */
+            else if (task.Status == TaskStatus.Faulted)
+            {
+                /* Report error to provider. */
+                service.Events.OnError(handler, task.Exception);
+
+                /* Close down connection. */
+                CloseConnection();
+            }
+
+            /* Something critical happened. */
             else
             {
-
+                throw new ApplicationException("Unknown task status: " + task.Status);
             }
         }
 
         private Action<Task> CompleteSendResponse(Action onRanToComplete)
         {
+            /* Return a delegate that will pass control along for a successful Send. */
             return Internal;
             void Internal(Task task)
             {
+                /* Did the send work? */
                 if (task.Status == TaskStatus.RanToCompletion)
                 {
+                    /* Clear the current response as it has now concluded. */
                     currResp = null;
+
+                    /* Call through to the delegate supplied by the original caller. */
                     onRanToComplete();
                 }
+
+                /* Handle error during write. */
+                else if (task.Status == TaskStatus.Faulted)
+                {
+                    /* Report error to provider. */
+                    service.Events.OnError(handler, task.Exception);
+
+                    /* Close down connection. */
+                    CloseConnection();
+                }
+
+                /* Something critical happened. */
                 else
                 {
-
+                    throw new ApplicationException("Unknown task status: " + task.Status);
                 }
             }
         }
@@ -257,7 +287,7 @@ namespace billpg.pop3
             /* Did the read fail because the underlying connection was closed? */
             if (task.IsConnectionClosed())
             {
-                CloseConnection();
+                /* Nothing to do. Don't lauch any new async tasks and leave this session to expire. */
             }
 
             /* If read was successful, start command interpreter. */
@@ -266,15 +296,22 @@ namespace billpg.pop3
                 buffer.UpdateUsedBytes(task.Result);
                 InterpretCommand();
             } 
+
+            /* Was there an error not covered by the is-connection-closed test? */
             else if (task.Status == TaskStatus.Faulted)
             {
+                /* Inform the provider object. */
+                service.Events.OnError(handler, task.Exception);
 
+                /* Close the underlying connection. */
+                CloseConnection();
             }
+
+            /* Critical event. */
             else
             {
-
+                throw new ApplicationException("Unexpected task.Status: " + task.Status);
             }
-
         }
 
         void OnCommand(string command, string pars)
