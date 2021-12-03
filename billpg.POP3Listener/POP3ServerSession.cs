@@ -64,6 +64,8 @@ namespace billpg.pop3
         /* To query if the stream is secure or not. */
         internal bool IsSecure => tls != null;
 
+        internal bool IsActive => tcp.Connected;
+
         internal void Start()
         {
             /* The initial stream is always the TCP, but may be replaced with a TLS stream later. */
@@ -76,24 +78,12 @@ namespace billpg.pop3
                 SendConnectBanner();
         }
 
-        internal void ServiceShutdown()
+        internal void CloseConnection()
         {
             lock (mutex)
             {
                 tcp.Close();
             }
-        }
-
-        private void CloseConnection()
-        {
-            lock (mutex)
-            {
-                /* Close the connection. */
-                tcp.Close();
-            }
-
-            /* Have the listener remove this object from the collection. */
-            service.RemoveConnection(this);
         }
 
         private void HandshakeTLS()
@@ -235,6 +225,11 @@ namespace billpg.pop3
             /* If there isn't a line of text in the buffer, we need to populate it. */
             if (linePacket == null)
             {
+                /* First check if the channel has closed, if so there's nothing to do. */
+                if (tcp.Connected == false)
+                    return;
+
+                /* Still good. */
                 currStream.ReadAsync(buffer.Buffer, buffer.VacantStart, buffer.VacantLength)
                     .LockContinueWith(mutex, CompleteRead);
             }

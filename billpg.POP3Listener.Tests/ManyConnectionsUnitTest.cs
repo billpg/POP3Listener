@@ -103,8 +103,7 @@ namespace billpg.pop3.Tests
             }
 
             /* Start listening. */
-            port = rnd.Next(1030, 65530);
-            pop3.ListenOn(IPAddress.Loopback, port, false);
+            port = pop3.ListenOnRandom(IPAddress.Loopback, false);
 
             /* Launch a hundred client threads. */
             var threads = Enumerable.Range(0, 100).Select(LaunchClient).ToList();

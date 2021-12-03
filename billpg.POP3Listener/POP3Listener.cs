@@ -82,19 +82,14 @@ namespace billpg.pop3
             {
                 lock (mutex)
                 {
+                    /* Clear closed conections. */
+                    connections.RemoveAll(con => con.IsActive == false);
+
+                    /* Add new connection. */
                     var connection = new POP3ServerSession(tcp, immediateTls, this, GenConnectionID());                   
                     this.connections.Add(connection);
                     connection.Start();
                 }
-            }
-        }
-
-
-        internal void RemoveConnection(POP3ServerSession con)
-        {
-            lock (mutex)
-            {
-                this.connections.Remove(con);
             }
         }
 
@@ -111,7 +106,7 @@ namespace billpg.pop3
 
                 /* Wait for the running workers to complete. */
                 foreach (var con in this.connections)
-                    con.ServiceShutdown();
+                    con.CloseConnection();
             }
         }
 
