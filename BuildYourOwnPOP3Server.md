@@ -5,7 +5,7 @@ as a mailbox and serves them to anyone logging in.
 I’m assuming you are already set-up to be writing and building C# code. If you have Windows, the free version of Visual Studio 2019 is great.
 (Or use a more recent version if one exists.) Visual Studio Code is great on Linux too.
 
-Download and build **billpg industries POP3 Listener**. Open up a new console app project and include the `billpg,POP3Listener.dll` file as a reference.
+Download and build **billpg industries POP3 Listener**. Open up a new console app project and include the `billpg.POP3Listener.dll` file as a reference.
 If you prefer, [the code for this project is in one piece on this github](https://github.com/billpg/POP3Listener/blob/main/BuildYourOwnPop3Service/Program.cs) .
 
 ```
@@ -37,7 +37,7 @@ namespace BuildYourOwnPop3Service
 }
 ```
 This is the bare minimum to run a POP3 service. It’ll only accept local connections. If you’re running on Linux, you may need to change the
-port you’re listening on to 1100. Either way, try connecting to it. You can set up your mail reader or use telnet to connect in and type commands.
+port you’re listening on to 1100 because the OS reserves all the low-numbered ports. Either way, try connecting to it. You can set up your mail reader or use telnet to connect in and type commands.
 
 # Accepting log-in requests.
 You’ll notice that any username and password combination fails. This is because the default authentication handler is in place, one which rejects all attempts to
@@ -70,8 +70,8 @@ is fine except NULL. It could be a copy of the supplied username, a stringified 
 - Create a table of usernames and hashed passwords and write an authentication function that queries this table. (Database table, text file, up to you.)
 
 # Mailbox Contents.
-With an authentication function, we can now log-in to our mailbox, but the mailbox is empty. This is because the default message-list handler only ever responds 
-with an empty list of messages. We need to write a handler that returns a list of messages.
+With an authentication function, we can now log-in to our mailbox, but the mailbox is always empty. This is because the default message-list handler only ever
+responds with an empty list of messages. We need to write a handler that returns a list of messages.
 
 You can set the handler by setting the `Events.OnMessageList` property to your custom fuunction. For now, let's write a simple function that reads the contents of 
 a folder. The service supplies the Mailbox ID which was set by the authentication function earlier.
@@ -104,7 +104,8 @@ Subject: We are the Rutabagas of New York!
 Hello my lovely family!
 ```
 
-(Warning, your file names cant have spaces as the POP3 protocol does not allow spaces in response to a UIDL command. If your file is called `"New Text Document.txt"` the service will complain if your code expects it to use that as a message's Unique ID.)
+(Warning! Your file names can't have spaces as the POP3 protocol does not allow spaces in response to a UIDL command. If your file is called
+`"New Text Document.txt"` the service will complain if your code expects it to use that as a message's Unique ID.)
 
 Because we've not written a way to retrieve the message contents yet, POP3 commands `STAT` and `LIST` won't work but `UIDL` will. (We'll see why later.)
 
