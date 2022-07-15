@@ -78,8 +78,7 @@ namespace billpg.pop3.Tests
 
         internal readonly static X509Certificate selfSigned =
             new X509Certificate2(
-                    LocateSelfSigned(),
-                    "Rutabaga");
+                    LocateSelfSigned()                    );
 
         private static string LocateSelfSigned()
         {

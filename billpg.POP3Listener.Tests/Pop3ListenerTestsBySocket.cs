@@ -27,6 +27,81 @@ namespace billpg.pop3.Tests
         private int port110 => 1100;
 
         [TestMethod]
+        public void POP3_QAUT()
+        {
+            /* Construct a listener with a mailbox. */
+            using var pop3 = new POP3Listener();
+            pop3.Events.OnAuthenticate = req => req.AuthMailboxID = "x";
+            var mailbox = Enumerable.Range(11, 100-11).Select(i => $"U{i}").ToHashSet();
+            pop3.Events.OnMessageList = id => mailbox.Shuffle().Take(10);
+            pop3.Events.OnMessageSize = (boxID, messageID) => 12;
+            pop3.Events.OnMessageDelete = (boxID, messageIDs) => mailbox.RemoveWhere(messageIDs.Contains);
+
+            /* Start listening. */
+            int port = pop3.ListenOnRandom(IPAddress.Loopback, false);
+
+            /* Connect as a client. */
+            using var tcp = new TcpClient("localhost", port);
+            using var str = tcp.GetStream();
+
+            /* Read connect banner. */
+            Assert.IsTrue(str.ReadLine().StartsWith("+OK"));
+
+            /* Log-in. */
+            str.WriteLine("USER This doesn't matter.");
+            Assert.IsTrue(str.ReadLine().StartsWith("+OK"));
+            str.WriteLine("PASS Nor this");
+            Assert.IsTrue(str.ReadLine().StartsWith("+OK"));
+
+            /* Mailbox contents. */
+            str.WriteLine("UIDL");
+            Assert.IsTrue(str.ReadLine().StartsWith("+OK"));
+            var uidlResp = new List<string>();
+            while(true)
+            {
+                var uidlLine = str.ReadLine();
+                if (uidlLine == ".")
+                    break;
+                uidlResp.Add(uidlLine);
+            }
+            Assert.AreEqual(10, uidlResp.Count);
+
+            /* Delete them all. */
+            foreach (int messageNumber in Enumerable.Range(1, uidlResp.Count))
+            {
+                str.WriteLine($"DELE {messageNumber}");
+                Assert.IsTrue(str.ReadLine().StartsWith("+OK"));
+            }
+
+            /* Log-out. Check messages are deleted before and after. */
+            Assert.AreEqual(89, mailbox.Count);
+            str.WriteLine("QAUT");
+            Assert.IsTrue(str.ReadLine().StartsWith("+OK"));
+            Assert.AreEqual(79, mailbox.Count);
+            foreach (var deletedID in uidlResp)
+                Assert.IsFalse(mailbox.Contains(deletedID));
+
+            /* Not logged in. Various commands should fail. */
+            foreach (var failCommand in "SLEE/WAKE/STAT/LIST/UIDL/RETR 1/PASS pass/DELE 1/QAUT".Split('/'))
+            {
+                str.WriteLine(failCommand);
+                var respLine = str.ReadLine();
+                if (failCommand == "PASS pass")
+                    Assert.AreEqual("-ERR Call USER before PASS.", respLine);
+                else
+                    Assert.AreEqual("-ERR Authenticate first.", respLine);
+            }
+
+            /* Log in again. */
+            str.WriteLine("XLOG Nothing really matters, anyone can see.");
+            Assert.IsTrue(str.ReadLine().StartsWith("+OK"));
+
+            /* Check STAT is correct. */
+            str.WriteLine("STAT");
+            Assert.AreEqual("+OK 10 120", str.ReadLine());
+        }
+
+        [TestMethod]
         public void POP3_ExcessiveMessageList()
         {
             /* Construct a listener. */

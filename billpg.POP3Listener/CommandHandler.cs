@@ -40,7 +40,7 @@ namespace billpg.pop3
             /* Standard CAPA Tags. (Not including STLS/USER as will be added only if applicable.) */
             "TOP", "RESP-CODES", "PIPELINING", "UIDL", "AUTH-RESP-CODE",
             /* Mine. */
-            "UID-PARAM", "MULTI-LINE-IND", "DELI", "SLEE-WAKE"
+            "UID-PARAM", "MULTI-LINE-IND", "DELI", "SLEE-WAKE", "QAUT"
         }.AsReadOnly();
 
         private static readonly IList<string> allowedUnauth = new List<string>
@@ -92,6 +92,7 @@ namespace billpg.pop3
                 case "DELE": return DELE(pars);
                 case "DELI": return DELI(pars);
                 case "QUIT": return QUIT();
+                case "QAUT": return QAUT();
                 case "RSET": return RSET();
                 case "SLEE": return SLEE();
                 case "WAKE": return WAKE();
@@ -462,6 +463,26 @@ namespace billpg.pop3
 
             /* Repot success. */
             return PopResponse.OKSingle("Un-flagged all messages flagged for delete.");
+        }
+
+        private PopResponse QAUT()
+        {
+            /* Only valid while logged in. */
+            if (this.authenticated == false)
+                return PopResponse.ERR("Not logged in.");
+
+            /* Call the provider to finally delete the flagged messages. */
+            DeleteFlaggedMessages(out int messageCount);
+            this.deletedUniqueIDs.Clear();
+
+            /* Leave the authenticated state. */
+            this.unauthUserName = null;
+            this.userNameAtLogin = null;
+            this.authMailboxID = null;
+            this.isSleeping = false;
+
+            /* Report sucess. */
+            return PopResponse.OKSingle("Logged out. You can either reauthenticate or exit.");
         }
 
         private PopResponse SLEE()
