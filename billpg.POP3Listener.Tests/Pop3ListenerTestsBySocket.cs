@@ -47,6 +47,20 @@ namespace billpg.pop3.Tests
             /* Read connect banner. */
             Assert.IsTrue(str.ReadLine().StartsWith("+OK"));
 
+            /* Check QAUT is on the CAPA list. */
+            str.WriteLine("CAPA");
+            Assert.IsTrue(str.ReadLine().StartsWith("+OK"));
+            bool capaContainsQuat = false;
+            while (true)
+            {
+                var capaLine = str.ReadLine();
+                if (capaLine == ".")
+                    break;
+                if (capaLine == "QAUT")
+                    capaContainsQuat = true;
+            }
+            Assert.IsTrue(capaContainsQuat);
+
             /* Log-in. */
             str.WriteLine("USER This doesn't matter.");
             Assert.IsTrue(str.ReadLine().StartsWith("+OK"));
